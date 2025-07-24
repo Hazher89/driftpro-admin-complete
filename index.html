@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DriftPro Admin Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="min-h-screen flex items-center justify-center">
+        <div class="text-center">
+            <div class="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500 mx-auto"></div>
+            <p class="mt-4 text-gray-400">Laster DriftPro Admin Panel...</p>
+        </div>
+    </div>
+
+    <!-- Login Screen -->
+    <div id="loginScreen" class="min-h-screen flex items-center justify-center hidden">
+        <div class="bg-gray-800 p-8 rounded-lg shadow-lg max-w-md w-full">
+            <h1 class="text-3xl font-bold text-center mb-6">DriftPro Admin</h1>
+            <p class="text-gray-400 text-center mb-6">Logg inn for å administrere systemet</p>
+            
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">E-post</label>
+                    <input type="email" id="email" required class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2">Passord</label>
+                    <input type="password" id="password" required class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500">
+                </div>
+                
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 p-3 rounded-lg font-semibold">
+                    Logg inn
+                </button>
+            </form>
+            
+            <div id="loginError" class="mt-4 text-red-400 text-center hidden"></div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboard" class="hidden">
+        <!-- Header -->
+        <header class="bg-gray-800 border-b border-gray-700">
+            <div class="container mx-auto px-4 py-4">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h1 class="text-2xl font-bold">DriftPro Admin Panel</h1>
+                        <p class="text-gray-400" id="userInfo">Innlogget som: <span id="currentUser"></span></p>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <span class="text-green-400">● Online</span>
+                        <button onclick="logout()" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg">
+                            Logg ut
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="container mx-auto px-4 py-8">
+            <!-- Statistics -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-gray-800 p-6 rounded-lg">
+                    <div class="text-3xl font-bold text-blue-400" id="userCount">-</div>
+                    <div class="text-gray-400">Aktive brukere</div>
+                </div>
+                <div class="bg-gray-800 p-6 rounded-lg">
+                    <div class="text-3xl font-bold text-green-400" id="departmentCount">-</div>
+                    <div class="text-gray-400">Avdelinger</div>
+                </div>
+                <div class="bg-gray-800 p-6 rounded-lg">
+                    <div class="text-3xl font-bold text-purple-400" id="chatCount">-</div>
+                    <div class="text-gray-400">Chat-rom</div>
+                </div>
+                <div class="bg-gray-800 p-6 rounded-lg">
+                    <div class="text-3xl font-bold text-red-400" id="deviationCount">-</div>
+                    <div class="text-gray-400">Åpne avvik</div>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                <div class="bg-gray-800 p-6 rounded-lg hover:bg-gray-700 transition-colors cursor-pointer" onclick="showSection('users')">
+                    <h2 class="text-xl font-semibold mb-4">👥 Brukeradministrasjon</h2>
+                    <p class="text-gray-400 mb-4">Administrer alle brukere i systemet</p>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-500" id="userCountSmall">- brukere</span>
+                        <span class="text-blue-400">→</span>
+                    </div>
+                </div>
+                
+                <div class="bg-gray-800 p-6 rounded-lg hover:bg-gray-700 transition-colors cursor-pointer" onclick="showSection('departments')">
+                    <h2 class="text-xl font-semibold mb-4">🏢 Avdelinger</h2>
+                    <p class="text-gray-400 mb-4">Administrer avdelinger og tildel managere</p>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-500" id="departmentCountSmall">- avdelinger</span>
+                        <span class="text-blue-400">→</span>
+                    </div>
+                </div>
+                
+                <div class="bg-gray-800 p-6 rounded-lg hover:bg-gray-700 transition-colors cursor-pointer" onclick="showSection('chat')">
+                    <h2 class="text-xl font-semibold mb-4">💬 Chat-oversikt</h2>
+                    <p class="text-gray-400 mb-4">Se alle chat-rom og meldinger</p>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-500" id="chatCountSmall">- chat-rom</span>
+                        <span class="text-blue-400">→</span>
+                    </div>
+                </div>
+                
+                <div class="bg-gray-800 p-6 rounded-lg hover:bg-gray-700 transition-colors cursor-pointer" onclick="showSection('deviations')">
+                    <h2 class="text-xl font-semibold mb-4">⚠️ Avvik-administrasjon</h2>
+                    <p class="text-gray-400 mb-4">Administrer avvik og rapporter</p>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-500" id="deviationCountSmall">- åpne avvik</span>
+                        <span class="text-blue-400">→</span>
+                    </div>
+                </div>
+                
+                <div class="bg-gray-800 p-6 rounded-lg hover:bg-gray-700 transition-colors cursor-pointer" onclick="showSection('documents')">
+                    <h2 class="text-xl font-semibold mb-4">📄 Dokumenter</h2>
+                    <p class="text-gray-400 mb-4">Se alle dokumenter i systemet</p>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-500" id="documentCountSmall">- dokumenter</span>
+                        <span class="text-blue-400">→</span>
+                    </div>
+                </div>
+                
+                <div class="bg-gray-800 p-6 rounded-lg hover:bg-gray-700 transition-colors cursor-pointer" onclick="showSection('shifts')">
+                    <h2 class="text-xl font-semibold mb-4">📅 Skiftplan</h2>
+                    <p class="text-gray-400 mb-4">Administrer skiftplan og tider</p>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-500" id="shiftCountSmall">- aktive skift</span>
+                        <span class="text-blue-400">→</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users Section -->
+            <div id="usersSection" class="hidden">
+                <div class="bg-gray-800 p-6 rounded-lg">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold">👥 Brukeradministrasjon</h2>
+                        <button onclick="showAddUserModal()" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg">
+                            + Legg til bruker
+                        </button>
+                    </div>
+                    
+                    <!-- Search and Filter -->
+                    <div class="flex gap-4 mb-6">
+                        <input type="text" id="userSearch" placeholder="Søk etter bruker..." class="flex-1 p-3 bg-gray-700 border border-gray-600 rounded-lg">
+                        <select id="roleFilter" class="p-3 bg-gray-700 border border-gray-600 rounded-lg">
+                            <option value="">Alle roller</option>
+                            <option value="super_admin">Super Admin</option>
+                            <option value="admin">Admin</option>
+                            <option value="manager">Manager</option>
+                            <option value="employee">Employee</option>
+                        </select>
+                        <select id="departmentFilter" class="p-3 bg-gray-700 border border-gray-600 rounded-lg">
+                            <option value="">Alle avdelinger</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Users Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-gray-700">
+                                    <th class="text-left p-3">Navn</th>
+                                    <th class="text-left p-3">E-post</th>
+                                    <th class="text-left p-3">Rolle</th>
+                                    <th class="text-left p-3">Avdeling</th>
+                                    <th class="text-left p-3">Status</th>
+                                    <th class="text-left p-3">Handlinger</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody">
+                                <!-- Users will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Departments Section -->
+            <div id="departmentsSection" class="hidden">
+                <div class="bg-gray-800 p-6 rounded-lg">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold">🏢 Avdelinger</h2>
+                        <button onclick="showAddDepartmentModal()" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg">
+                            + Legg til avdeling
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="departmentsGrid">
+                        <!-- Departments will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Section -->
+            <div id="chatSection" class="hidden">
+                <div class="bg-gray-800 p-6 rounded-lg">
+                    <h2 class="text-2xl font-bold mb-6">💬 Chat-oversikt</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="chatOverview">
+                        <!-- Chat overview will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Deviations Section -->
+            <div id="deviationsSection" class="hidden">
+                <div class="bg-gray-800 p-6 rounded-lg">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold">⚠️ Avvik-administrasjon</h2>
+                        <button onclick="showAddDeviationModal()" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg">
+                            + Nytt avvik
+                        </button>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-gray-700">
+                                    <th class="text-left p-3">ID</th>
+                                    <th class="text-left p-3">Beskrivelse</th>
+                                    <th class="text-left p-3">Rapportert av</th>
+                                    <th class="text-left p-3">Prioritet</th>
+                                    <th class="text-left p-3">Status</th>
+                                    <th class="text-left p-3">Handlinger</th>
+                                </tr>
+                            </thead>
+                            <tbody id="deviationsTableBody">
+                                <!-- Deviations will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Documents Section -->
+            <div id="documentsSection" class="hidden">
+                <div class="bg-gray-800 p-6 rounded-lg">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold">📄 Dokumenter</h2>
+                        <button onclick="showAddDocumentModal()" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg">
+                            + Last opp dokument
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="documentsGrid">
+                        <!-- Documents will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shifts Section -->
+            <div id="shiftsSection" class="hidden">
+                <div class="bg-gray-800 p-6 rounded-lg">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold">📅 Skiftplan</h2>
+                        <button onclick="showAddShiftModal()" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg">
+                            + Nytt skift
+                        </button>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-gray-700">
+                                    <th class="text-left p-3">Dato</th>
+                                    <th class="text-left p-3">Bruker</th>
+                                    <th class="text-left p-3">Start</th>
+                                    <th class="text-left p-3">Slutt</th>
+                                    <th class="text-left p-3">Status</th>
+                                    <th class="text-left p-3">Handlinger</th>
+                                </tr>
+                            </thead>
+                            <tbody id="shiftsTableBody">
+                                <!-- Shifts will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add User Modal -->
+    <div id="addUserModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-gray-800 p-6 rounded-lg max-w-md w-full mx-4">
+            <h3 class="text-xl font-bold mb-4">Legg til bruker</h3>
+            <form id="addUserForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Fornavn</label>
+                    <input type="text" id="firstName" required class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Etternavn</label>
+                    <input type="text" id="lastName" required class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">E-post</label>
+                    <input type="email" id="userEmail" required class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Rolle</label>
+                    <select id="userRole" required class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg">
+                        <option value="employee">Employee</option>
+                        <option value="manager">Manager</option>
+                        <option value="admin">Admin</option>
+                        <option value="super_admin">Super Admin</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Avdeling</label>
+                    <select id="userDepartment" required class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg">
+                        <!-- Departments will be loaded here -->
+                    </select>
+                </div>
+                <div class="flex gap-2">
+                    <button type="submit" class="flex-1 bg-green-600 hover:bg-green-700 p-3 rounded-lg">Legg til</button>
+                    <button type="button" onclick="hideAddUserModal()" class="flex-1 bg-gray-600 hover:bg-gray-700 p-3 rounded-lg">Avbryt</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+            authDomain: "driftpro-xxxxx.firebaseapp.com",
+            projectId: "driftpro-xxxxx",
+            storageBucket: "driftpro-xxxxx.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef123456"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        let currentUser = null;
+        let users = [];
+        let departments = [];
+        let chats = [];
+        let deviations = [];
+        let documents = [];
+        let shifts = [];
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuthState();
+        });
+
+        function checkAuthState() {
+            auth.onAuthStateChanged(function(user) {
+                if (user) {
+                    currentUser = user;
+                    showDashboard();
+                    loadAllData();
+                } else {
+                    showLogin();
+                }
+            });
+        }
+
+        function showLogin() {
+            document.getElementById('loadingScreen').classList.add('hidden');
+            document.getElementById('loginScreen').classList.remove('hidden');
+            document.getElementById('dashboard').classList.add('hidden');
+        }
+
+        function showDashboard() {
+            document.getElementById('loadingScreen').classList.add('hidden');
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('dashboard').classList.remove('hidden');
+            document.getElementById('currentUser').textContent = currentUser.email;
+        }
+
+        // Login form
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            auth.signInWithEmailAndPassword(email, password)
+                .catch(function(error) {
+                    document.getElementById('loginError').textContent = error.message;
+                    document.getElementById('loginError').classList.remove('hidden');
+                });
+        });
+
+        function logout() {
+            auth.signOut();
+        }
+
+        // Load all data from Firestore
+        async function loadAllData() {
+            try {
+                await Promise.all([
+                    loadUsers(),
+                    loadDepartments(),
+                    loadChats(),
+                    loadDeviations(),
+                    loadDocuments(),
+                    loadShifts()
+                ]);
+                updateStatistics();
+            } catch (error) {
+                console.error('Error loading data:', error);
+            }
+        }
+
+        async function loadUsers() {
+            const snapshot = await db.collection('users').get();
+            users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            displayUsers();
+        }
+
+        async function loadDepartments() {
+            const snapshot = await db.collection('departments').get();
+            departments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            displayDepartments();
+            updateDepartmentFilters();
+        }
+
+        async function loadChats() {
+            const snapshot = await db.collection('chats').get();
+            chats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            displayChats();
+        }
+
+        async function loadDeviations() {
+            const snapshot = await db.collection('deviations').get();
+            deviations = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            displayDeviations();
+        }
+
+        async function loadDocuments() {
+            const snapshot = await db.collection('documents').get();
+            documents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            displayDocuments();
+        }
+
+        async function loadShifts() {
+            const snapshot = await db.collection('shifts').get();
+            shifts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            displayShifts();
+        }
+
+        function updateStatistics() {
+            document.getElementById('userCount').textContent = users.length;
+            document.getElementById('departmentCount').textContent = departments.length;
+            document.getElementById('chatCount').textContent = chats.length;
+            document.getElementById('deviationCount').textContent = deviations.filter(d => d.status === 'open').length;
+
+            document.getElementById('userCountSmall').textContent = `${users.length} brukere`;
+            document.getElementById('departmentCountSmall').textContent = `${departments.length} avdelinger`;
+            document.getElementById('chatCountSmall').textContent = `${chats.length} chat-rom`;
+            document.getElementById('deviationCountSmall').textContent = `${deviations.filter(d => d.status === 'open').length} åpne avvik`;
+            document.getElementById('documentCountSmall').textContent = `${documents.length} dokumenter`;
+            document.getElementById('shiftCountSmall').textContent = `${shifts.filter(s => s.status === 'active').length} aktive skift`;
+        }
+
+        function displayUsers() {
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = '';
+            
+            users.forEach(user => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-700';
+                row.innerHTML = `
+                    <td class="p-3">${user.firstName} ${user.lastName}</td>
+                    <td class="p-3">${user.email}</td>
+                    <td class="p-3"><span class="bg-blue-600 px-2 py-1 rounded text-sm">${user.role}</span></td>
+                    <td class="p-3">${user.department || 'Ikke tildelt'}</td>
+                    <td class="p-3"><span class="text-green-400">● Aktiv</span></td>
+                    <td class="p-3">
+                        <button onclick="editUser('${user.id}')" class="bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded text-sm mr-2">Rediger</button>
+                        <button onclick="deleteUser('${user.id}')" class="bg-red-600 hover:bg-red-700 px-2 py-1 rounded text-sm">Slett</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function displayDepartments() {
+            const grid = document.getElementById('departmentsGrid');
+            grid.innerHTML = '';
+            
+            departments.forEach(dept => {
+                const div = document.createElement('div');
+                div.className = 'bg-gray-700 p-4 rounded-lg';
+                div.innerHTML = `
+                    <h3 class="font-semibold mb-2">${dept.name}</h3>
+                    <p class="text-gray-400 text-sm mb-2">Manager: ${dept.manager || 'Ikke tildelt'}</p>
+                    <p class="text-gray-400 text-sm mb-4">${users.filter(u => u.department === dept.name).length} brukere</p>
+                    <div class="flex gap-2">
+                        <button onclick="editDepartment('${dept.id}')" class="bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded text-sm">Rediger</button>
+                        <button onclick="deleteDepartment('${dept.id}')" class="bg-red-600 hover:bg-red-700 px-2 py-1 rounded text-sm">Slett</button>
+                    </div>
+                `;
+                grid.appendChild(div);
+            });
+        }
+
+        function displayChats() {
+            const overview = document.getElementById('chatOverview');
+            overview.innerHTML = `
+                <div class="bg-gray-700 p-4 rounded-lg">
+                    <h3 class="font-semibold mb-2">Direkte meldinger</h3>
+                    <p class="text-gray-400 text-sm mb-4">${chats.filter(c => c.type === 'direct').length} aktive samtaler</p>
+                    <button onclick="viewDirectChats()" class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm">Se alle</button>
+                </div>
+                <div class="bg-gray-700 p-4 rounded-lg">
+                    <h3 class="font-semibold mb-2">Gruppe-chat</h3>
+                    <p class="text-gray-400 text-sm mb-4">${chats.filter(c => c.type === 'group').length} grupper</p>
+                    <button onclick="viewGroupChats()" class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm">Se alle</button>
+                </div>
+            `;
+        }
+
+        function displayDeviations() {
+            const tbody = document.getElementById('deviationsTableBody');
+            tbody.innerHTML = '';
+            
+            deviations.forEach(deviation => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-700';
+                row.innerHTML = `
+                    <td class="p-3">#${deviation.id}</td>
+                    <td class="p-3">${deviation.description}</td>
+                    <td class="p-3">${deviation.reportedBy}</td>
+                    <td class="p-3"><span class="bg-red-600 px-2 py-1 rounded text-sm">${deviation.priority}</span></td>
+                    <td class="p-3"><span class="bg-yellow-600 px-2 py-1 rounded text-sm">${deviation.status}</span></td>
+                    <td class="p-3">
+                        <button onclick="viewDeviation('${deviation.id}')" class="bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded text-sm mr-2">Se detaljer</button>
+                        <button onclick="resolveDeviation('${deviation.id}')" class="bg-green-600 hover:bg-green-700 px-2 py-1 rounded text-sm">Løst</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function displayDocuments() {
+            const grid = document.getElementById('documentsGrid');
+            grid.innerHTML = '';
+            
+            documents.forEach(doc => {
+                const div = document.createElement('div');
+                div.className = 'bg-gray-700 p-4 rounded-lg';
+                div.innerHTML = `
+                    <h3 class="font-semibold mb-2">${doc.name}</h3>
+                    <p class="text-gray-400 text-sm mb-2">Opplastet av: ${doc.uploadedBy}</p>
+                    <p class="text-gray-400 text-sm mb-4">${doc.size} • ${doc.downloads} nedlastinger</p>
+                    <div class="flex gap-2">
+                        <button onclick="downloadDocument('${doc.id}')" class="bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded text-sm">Last ned</button>
+                        <button onclick="deleteDocument('${doc.id}')" class="bg-red-600 hover:bg-red-700 px-2 py-1 rounded text-sm">Slett</button>
+                    </div>
+                `;
+                grid.appendChild(div);
+            });
+        }
+
+        function displayShifts() {
+            const tbody = document.getElementById('shiftsTableBody');
+            tbody.innerHTML = '';
+            
+            shifts.forEach(shift => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-700';
+                row.innerHTML = `
+                    <td class="p-3">${new Date(shift.date).toLocaleDateString('no-NO')}</td>
+                    <td class="p-3">${shift.userName}</td>
+                    <td class="p-3">${shift.startTime}</td>
+                    <td class="p-3">${shift.endTime}</td>
+                    <td class="p-3"><span class="text-green-400">● ${shift.status}</span></td>
+                    <td class="p-3">
+                        <button onclick="editShift('${shift.id}')" class="bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded text-sm mr-2">Rediger</button>
+                        <button onclick="deleteShift('${shift.id}')" class="bg-red-600 hover:bg-red-700 px-2 py-1 rounded text-sm">Slett</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateDepartmentFilters() {
+            const filter = document.getElementById('departmentFilter');
+            const userDept = document.getElementById('userDepartment');
+            
+            filter.innerHTML = '<option value="">Alle avdelinger</option>';
+            userDept.innerHTML = '';
+            
+            departments.forEach(dept => {
+                filter.innerHTML += `<option value="${dept.name}">${dept.name}</option>`;
+                userDept.innerHTML += `<option value="${dept.name}">${dept.name}</option>`;
+            });
+        }
+
+        // Navigation
+        function showSection(section) {
+            document.querySelectorAll('[id$="Section"]').forEach(el => el.classList.add('hidden'));
+            document.getElementById(section + 'Section').classList.remove('hidden');
+        }
+
+        // Modal functions
+        function showAddUserModal() {
+            document.getElementById('addUserModal').classList.remove('hidden');
+        }
+
+        function hideAddUserModal() {
+            document.getElementById('addUserModal').classList.add('hidden');
+            document.getElementById('addUserForm').reset();
+        }
+
+        // Add user form
+        document.getElementById('addUserForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const userData = {
+                firstName: document.getElementById('firstName').value,
+                lastName: document.getElementById('lastName').value,
+                email: document.getElementById('userEmail').value,
+                role: document.getElementById('userRole').value,
+                department: document.getElementById('userDepartment').value,
+                createdAt: new Date(),
+                isActive: true
+            };
+
+            try {
+                await db.collection('users').add(userData);
+                hideAddUserModal();
+                loadUsers();
+                updateStatistics();
+            } catch (error) {
+                console.error('Error adding user:', error);
+            }
+        });
+
+        // Placeholder functions for other actions
+        function editUser(userId) { alert('Rediger bruker funksjonalitet kommer snart!'); }
+        function deleteUser(userId) { alert('Slett bruker funksjonalitet kommer snart!'); }
+        function editDepartment(deptId) { alert('Rediger avdeling funksjonalitet kommer snart!'); }
+        function deleteDepartment(deptId) { alert('Slett avdeling funksjonalitet kommer snart!'); }
+        function viewDirectChats() { alert('Se direkte chat funksjonalitet kommer snart!'); }
+        function viewGroupChats() { alert('Se gruppe chat funksjonalitet kommer snart!'); }
+        function viewDeviation(deviationId) { alert('Se avvik detaljer funksjonalitet kommer snart!'); }
+        function resolveDeviation(deviationId) { alert('Løs avvik funksjonalitet kommer snart!'); }
+        function downloadDocument(docId) { alert('Last ned dokument funksjonalitet kommer snart!'); }
+        function deleteDocument(docId) { alert('Slett dokument funksjonalitet kommer snart!'); }
+        function editShift(shiftId) { alert('Rediger skift funksjonalitet kommer snart!'); }
+        function deleteShift(shiftId) { alert('Slett skift funksjonalitet kommer snart!'); }
+        function showAddDepartmentModal() { alert('Legg til avdeling funksjonalitet kommer snart!'); }
+        function showAddDeviationModal() { alert('Legg til avvik funksjonalitet kommer snart!'); }
+        function showAddDocumentModal() { alert('Last opp dokument funksjonalitet kommer snart!'); }
+        function showAddShiftModal() { alert('Legg til skift funksjonalitet kommer snart!'); }
+    </script>
+</body>
+</html> 
