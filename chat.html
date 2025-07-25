@@ -7,6 +7,12 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         function goToDashboard() {
+            // Check if user is logged in and go directly to dashboard
+            if (localStorage.getItem('selectedCompanyId')) {
+                window.location.href = "/dashboard.html";
+            } else {
+                window.location.href = "/";
+            }
             window.location.href = "/";
         }
     </script>

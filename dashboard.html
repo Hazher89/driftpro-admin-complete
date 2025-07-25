@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - DriftPro Admin Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
+            authDomain: "driftpro-40ccd.firebaseapp.com",
+            projectId: "driftpro-40ccd",
+            storageBucket: "driftpro-40ccd.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef123456"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        // Check if user is logged in
+        auth.onAuthStateChanged(function(user) {
+            if (user) {
+                // User is signed in, show dashboard
+                document.getElementById('userName').textContent = user.email;
+                loadDashboardStats();
+            } else {
+                // No user is signed in, redirect to main page
+                window.location.href = '/';
+            }
+        });
+
+        // Function to load dashboard stats
+        async function loadDashboardStats() {
+            try {
+                // Load employee count
+                const employeesSnapshot = await db.collection('users').where('companyId', '==', localStorage.getItem('selectedCompanyId') || 'driftpro-40ccd').get();
+                document.getElementById('totalEmployees').textContent = employeesSnapshot.size;
+
+                // Load department count
+                const departmentsSnapshot = await db.collection('departments').where('companyId', '==', localStorage.getItem('selectedCompanyId') || 'driftpro-40ccd').get();
+                document.getElementById('totalDepartments').textContent = departmentsSnapshot.size;
+
+                // Mock data for now
+                document.getElementById('openDeviations').textContent = '5';
+                document.getElementById('activeShifts').textContent = '3';
+            } catch (error) {
+                console.error('Error loading dashboard stats:', error);
+            }
+        }
+
+        // Function to show add user modal
+        function showAddUserModal() {
+            document.getElementById('addUserModal').style.display = 'block';
+            loadDepartments();
+        }
+
+        // Function to hide add user modal
+        function hideAddUserModal() {
+            document.getElementById('addUserModal').style.display = 'none';
+        }
+
+        // Function to load departments for dropdown
+        async function loadDepartments() {
+            try {
+                const selectedCompanyId = localStorage.getItem('selectedCompanyId') || 'driftpro-40ccd';
+                const snapshot = await db.collection('departments').where('companyId', '==', selectedCompanyId).get();
+                const select = document.getElementById('userDepartment');
+                select.innerHTML = '<option value="">Velg avdeling</option>';
+                
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const option = document.createElement('option');
+                    option.value = doc.id;
+                    option.textContent = data.name;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading departments:', error);
+            }
+        }
+
+        // Function to handle add user form
+        document.addEventListener('DOMContentLoaded', function() {
+            const addUserForm = document.getElementById('addUserForm');
+            if (addUserForm) {
+                addUserForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const submitButton = e.target.querySelector('button[type="submit"]');
+                    submitButton.disabled = true;
+                    submitButton.textContent = 'Oppretter...';
+                    
+                    const name = document.getElementById('userName').value;
+                    const email = document.getElementById('userEmail').value;
+                    const departmentId = document.getElementById('userDepartment').value;
+                    const selectedCompanyId = localStorage.getItem('selectedCompanyId') || 'driftpro-40ccd';
+                    
+                    try {
+                        // Generate temporary password
+                        const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).toUpperCase().slice(-4) + '!1';
+                        
+                        // Create user in Firebase Auth
+                        const userCredential = await auth.createUserWithEmailAndPassword(email, tempPassword);
+                        const user = userCredential.user;
+                        
+                        // Store user data in Firestore
+                        await db.collection('users').doc(user.uid).set({
+                            name: name,
+                            email: email,
+                            departmentId: departmentId,
+                            companyId: selectedCompanyId,
+                            mustChangePassword: true,
+                            createdAt: new Date()
+                        });
+                        
+                        // Send email with temporary password (placeholder)
+                        console.log('Temporary password for', email, ':', tempPassword);
+                        
+                        alert(`Bruker opprettet! Midlertidig passord: ${tempPassword}`);
+                        hideAddUserModal();
+                        e.target.reset();
+                        
+                    } catch (error) {
+                        console.error('Error creating user:', error);
+                        alert('Feil ved opprettelse av bruker: ' + error.message);
+                    } finally {
+                        submitButton.disabled = false;
+                        submitButton.textContent = 'Opprett';
+                    }
+                });
+            }
+        });
+
+        // Function to logout
+        function logout() {
+            auth.signOut().then(() => {
+                localStorage.removeItem('selectedCompanyId');
+                window.location.href = '/';
+            }).catch((error) => {
+                console.error('Logout error:', error);
+            });
+        }
+
+        // Modal functions
+        function showAddDepartmentModal() {
+            alert('Avdeling funksjonalitet kommer snart!');
+        }
+
+        function showAddDeviationModal() {
+            alert('Avvik funksjonalitet kommer snart!');
+        }
+
+        function showAddShiftModal() {
+            alert('Skiftplaner funksjonalitet kommer snart!');
+        }
+    </script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <!-- Dashboard -->
+    <div style="padding: 2rem;">
+        <div style="max-width: 1400px; margin: 0 auto;">
+            <!-- Header -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid #374151;">
+                <div>
+                    <h1 style="font-size: 2rem; font-weight: bold; color: white;">DriftPro Admin Panel</h1>
+                    <p style="color: #9ca3af; margin-top: 0.5rem;">Administrer bedrift, ansatte og drift</p>
+                </div>
+                <div style="display: flex; gap: 1rem; align-items: center;">
+                    <span id="userInfo" style="color: #9ca3af;">Logget inn som: <span id="userName" style="color: white; font-weight: bold;"></span></span>
+                    <button onclick="logout()" style="padding: 0.5rem 1rem; background: #ef4444; border: none; border-radius: 0.5rem; color: white; cursor: pointer; transition: background 0.2s;">Logg Ut</button>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+                <div style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); border-radius: 1rem; padding: 1.5rem; color: white;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h3 style="font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem;">Totale Ansatte</h3>
+                            <p style="font-size: 2rem; font-weight: bold;" id="totalEmployees">0</p>
+                        </div>
+                        <div style="font-size: 2rem;">👥</div>
+                    </div>
+                </div>
+                <div style="background: linear-gradient(135deg, #10b981, #059669); border-radius: 1rem; padding: 1.5rem; color: white;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h3 style="font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem;">Aktive Avdelinger</h3>
+                            <p style="font-size: 2rem; font-weight: bold;" id="totalDepartments">0</p>
+                        </div>
+                        <div style="font-size: 2rem;">🏢</div>
+                    </div>
+                </div>
+                <div style="background: linear-gradient(135deg, #f59e0b, #d97706); border-radius: 1rem; padding: 1.5rem; color: white;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h3 style="font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem;">Åpne Avvik</h3>
+                            <p style="font-size: 2rem; font-weight: bold;" id="openDeviations">0</p>
+                        </div>
+                        <div style="font-size: 2rem;">⚠️</div>
+                    </div>
+                </div>
+                <div style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); border-radius: 1rem; padding: 1.5rem; color: white;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h3 style="font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem;">Aktive Skift</h3>
+                            <p style="font-size: 2rem; font-weight: bold;" id="activeShifts">0</p>
+                        </div>
+                        <div style="font-size: 2rem;">🕐</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content Grid -->
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
+                <!-- Left Column -->
+                <div style="display: flex; flex-direction: column; gap: 2rem;">
+                    <!-- Quick Actions -->
+                    <div style="background: #1f2937; border-radius: 1rem; padding: 2rem;">
+                        <h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1.5rem; color: white;">Hurtig Handlinger</h2>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                            <button onclick="showAddUserModal()" style="padding: 1rem; background: #3b82f6; border: none; border-radius: 0.5rem; color: white; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="font-size: 1.25rem;">➕</span>
+                                <span>Legg til Ansatt</span>
+                            </button>
+                            <button onclick="showAddDepartmentModal()" style="padding: 1rem; background: #10b981; border: none; border-radius: 0.5rem; color: white; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="font-size: 1.25rem;">��</span>
+                                <span>Ny Avdeling</span>
+                            </button>
+                            <button onclick="showAddDeviationModal()" style="padding: 1rem; background: #f59e0b; border: none; border-radius: 0.5rem; color: white; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="font-size: 1.25rem;">⚠️</span>
+                                <span>Rapporter Avvik</span>
+                            </button>
+                            <button onclick="showAddShiftModal()" style="padding: 1rem; background: #8b5cf6; border: none; border-radius: 0.5rem; color: white; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="font-size: 1.25rem;">🕐</span>
+                                <span>Planlegg Skift</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity -->
+                    <div style="background: #1f2937; border-radius: 1rem; padding: 2rem;">
+                        <h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1.5rem; color: white;">Siste Aktivitet</h2>
+                        <div id="recentActivity" style="display: flex; flex-direction: column; gap: 1rem;">
+                            <div style="padding: 1rem; background: #374151; border-radius: 0.5rem; border-left: 4px solid #3b82f6;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <p style="font-weight: bold; color: white;">Ny ansatt registrert</p>
+                                        <p style="color: #9ca3af; font-size: 0.875rem;">John Doe ble lagt til i IT-avdelingen</p>
+                                    </div>
+                                    <span style="color: #9ca3af; font-size: 0.875rem;">2 min siden</span>
+                                </div>
+                            </div>
+                            <div style="padding: 1rem; background: #374151; border-radius: 0.5rem; border-left: 4px solid #f59e0b;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <p style="font-weight: bold; color: white;">Avvik rapportert</p>
+                                        <p style="color: #9ca3af; font-size: 0.875rem;">Sikkerhetsbrudd i bygg A</p>
+                                    </div>
+                                    <span style="color: #9ca3af; font-size: 0.875rem;">15 min siden</span>
+                                </div>
+                            </div>
+                            <div style="padding: 1rem; background: #374151; border-radius: 0.5rem; border-left: 4px solid #10b981;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <p style="font-weight: bold; color: white;">Skift endret</p>
+                                        <p style="color: #9ca3af; font-size: 0.875rem;">Natteskift for produksjon oppdatert</p>
+                                    </div>
+                                    <span style="color: #9ca3af; font-size: 0.875rem;">1 time siden</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column -->
+                <div style="display: flex; flex-direction: column; gap: 2rem;">
+                    <!-- Navigation Cards -->
+                    <div style="background: #1f2937; border-radius: 1rem; padding: 2rem;">
+                        <h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1.5rem; color: white;">Navigasjon</h2>
+                        <div style="display: flex; flex-direction: column; gap: 1rem;">
+                            <a href="/departments.html" style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; text-decoration: none; transition: background 0.2s; display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="font-size: 1.25rem;">🏢</span>
+                                <span>Avdelinger</span>
+                                <span style="margin-left: auto; color: #9ca3af;">→</span>
+                            </a>
+                            <a href="/employees.html" style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; text-decoration: none; transition: background 0.2s; display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="font-size: 1.25rem;">👥</span>
+                                <span>Ansatte</span>
+                                <span style="margin-left: auto; color: #9ca3af;">→</span>
+                            </a>
+                            <a href="/deviations.html" style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; text-decoration: none; transition: background 0.2s; display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="font-size: 1.25rem;">⚠️</span>
+                                <span>Avvik</span>
+                                <span style="margin-left: auto; color: #9ca3af;">→</span>
+                            </a>
+                            <a href="/shifts.html" style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; text-decoration: none; transition: background 0.2s; display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="font-size: 1.25rem;">🕐</span>
+                                <span>Skiftplaner</span>
+                                <span style="margin-left: auto; color: #9ca3af;">→</span>
+                            </a>
+                            <a href="/chat.html" style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; text-decoration: none; transition: background 0.2s; display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="font-size: 1.25rem;">💬</span>
+                                <span>Chat</span>
+                                <span style="margin-left: auto; color: #9ca3af;">→</span>
+                            </a>
+                            <a href="/documents.html" style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; text-decoration: none; transition: background 0.2s; display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="font-size: 1.25rem;">📄</span>
+                                <span>Dokumenter</span>
+                                <span style="margin-left: auto; color: #9ca3af;">→</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Quick Stats -->
+                    <div style="background: #1f2937; border-radius: 1rem; padding: 2rem;">
+                        <h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1.5rem; color: white;">Hurtig Statistikk</h2>
+                        <div style="display: flex; flex-direction: column; gap: 1rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: #374151; border-radius: 0.5rem;">
+                                <span style="color: #9ca3af;">Dagens skift</span>
+                                <span style="color: white; font-weight: bold;">3 aktive</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: #374151; border-radius: 0.5rem;">
+                                <span style="color: #9ca3af;">Ubehandlede avvik</span>
+                                <span style="color: white; font-weight: bold;">5 stk</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: #374151; border-radius: 0.5rem;">
+                                <span style="color: #9ca3af;">Aktive chatrom</span>
+                                <span style="color: white; font-weight: bold;">2 stk</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: #374151; border-radius: 0.5rem;">
+                                <span style="color: #9ca3af;">Nye dokumenter</span>
+                                <span style="color: white; font-weight: bold;">12 stk</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add User Modal -->
+    <div id="addUserModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 1000;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1f2937; padding: 2rem; border-radius: 1rem; max-width: 500px; width: 90%;">
+            <h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem;">Legg til Ansatt</h2>
+            <form id="addUserForm" style="display: flex; flex-direction: column; gap: 1rem;">
+                <input type="text" id="userName" placeholder="Navn" required style="padding: 0.75rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white;">
+                <input type="email" id="userEmail" placeholder="E-post" required style="padding: 0.75rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white;">
+                <select id="userDepartment" required style="padding: 0.75rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white;">
+                    <option value="">Velg avdeling</option>
+                </select>
+                <div style="display: flex; gap: 1rem;">
+                    <button type="submit" style="flex: 1; padding: 0.75rem; background: #3b82f6; border: none; border-radius: 0.5rem; color: white; cursor: pointer;">Opprett</button>
+                    <button type="button" onclick="hideAddUserModal()" style="flex: 1; padding: 0.75rem; background: #6b7280; border: none; border-radius: 0.5rem; color: white; cursor: pointer;">Avbryt</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
