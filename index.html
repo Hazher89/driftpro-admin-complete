@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DriftPro Admin Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
+            authDomain: "driftpro-40ccd.firebaseapp.com",
+            projectId: "driftpro-40ccd",
+            storageBucket: "driftpro-40ccd.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef123456"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        console.log('Firebase initialized successfully');
+
+        // Test function to check if Firestore is working
+        async function testFirestore() {
+            try {
+                await db.collection('test').doc('testDoc').set({ timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+                console.log('Firestore test successful: Can write and read.');
+                return true;
+            } catch (error) {
+                console.error('Firestore test failed:', error);
+                return false;
+            }
+        }
+
+        // Function to create test companies if none exist
+        async function createTestCompanies() {
+            try {
+                console.log('Checking if test companies need to be created...');
+                const snapshot = await db.collection('companies').get();
+                
+                if (snapshot.empty) {
+                    console.log('No companies found, creating test companies...');
+                    const testCompanies = [
+                        { id: 'driftpro-40ccd', name: 'DriftPro', code: 'DP', createdAt: new Date() },
+                        { id: 'test-company', name: 'Test Bedrift', code: 'TB', createdAt: new Date() },
+                        { id: 'acme-corp', name: 'ACME Corporation', code: 'ACME', createdAt: new Date() },
+                        { id: 'tech-solutions', name: 'Tech Solutions AS', code: 'TS', createdAt: new Date() },
+                        { id: 'nordic-engineering', name: 'Nordic Engineering', code: 'NE', createdAt: new Date() }
+                    ];
+                    
+                    for (const company of testCompanies) {
+                        await db.collection('companies').doc(company.id).set(company);
+                    }
+                    console.log(`Created ${testCompanies.length} test companies.`);
+                } else {
+                    console.log('Companies already exist in Firestore.');
+                }
+            } catch (error) {
+                console.error('Error creating test companies:', error);
+            }
+        }
+
+        // Function to search companies from Firestore
+        async function searchCompanies(query) {
+            const resultsContainer = document.getElementById('companySearchResults');
+            
+            if (query.length < 2) {
+                resultsContainer.innerHTML = `
+                    <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #9ca3af; text-align: center;">
+                        Skriv minst 2 bokstaver for å søke etter bedrifter
+                    </div>
+                `;
+                return;
+            }
+            
+            try {
+                console.log('Searching for companies with query:', query);
+                
+                // Search in Firestore companies collection
+                const companiesRef = db.collection('companies');
+                console.log('Querying companies collection...');
+                const snapshot = await companiesRef.get();
+                console.log('Found', snapshot.size, 'companies in Firestore');
+                
+                const companies = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    companies.push({
+                        id: doc.id,
+                        name: data.name || data.companyName || 'Ukjent navn',
+                        code: data.code || data.companyCode || doc.id
+                    });
+                });
+                
+                // Filter companies based on search query
+                const filteredCompanies = companies.filter(company => 
+                    company.name.toLowerCase().includes(query.toLowerCase()) || 
+                    company.code.toLowerCase().includes(query.toLowerCase())
+                );
+                
+                console.log('Filtered companies:', filteredCompanies);
+                
+                if (filteredCompanies.length === 0) {
+                    resultsContainer.innerHTML = `
+                        <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #9ca3af; text-align: center;">
+                            Ingen bedrifter funnet for "${query}"
+                        </div>
+                    `;
+                } else {
+                    resultsContainer.innerHTML = filteredCompanies.map(company => `
+                        <button onclick="selectCompany('${company.id}')" style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; cursor: pointer; text-align: left; transition: background 0.2s; margin-bottom: 0.5rem; width: 100%;">
+                            <div style="font-weight: bold; margin-bottom: 0.25rem;">${company.name}</div>
+                            <div style="font-size: 0.875rem; color: #9ca3af;">${company.code}</div>
+                        </button>
+                    `).join('');
+                }
+                
+            } catch (error) {
+                console.error('Error searching companies:', error);
+                resultsContainer.innerHTML = `
+                    <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #ef4444; text-align: center;">
+                        Feil ved søk etter bedrifter. Prøv igjen.
+                    </div>
+                `;
+            }
+        }
+
+        // Function to select a company
+        function selectCompany(companyId) {
+            console.log('Selected company:', companyId);
+            localStorage.setItem('selectedCompanyId', companyId);
+            showLogin();
+        }
+
+        // Function to show company search screen
+        function showCompanySearch() {
+            console.log('Showing company search screen');
+            document.getElementById('loadingScreen').style.display = 'none';
+            document.getElementById('companySearchScreen').style.display = 'flex';
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'none';
+        }
+
+        // Function to show login screen
+        function showLogin() {
+            console.log('Showing login screen');
+            document.getElementById('loadingScreen').style.display = 'none';
+            document.getElementById('companySearchScreen').style.display = 'none';
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('dashboard').style.display = 'none';
+        }
+
+        // Function to show dashboard
+        function showDashboard() {
+            console.log('Showing dashboard');
+            document.getElementById('loadingScreen').style.display = 'none';
+            document.getElementById('companySearchScreen').style.display = 'none';
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+        }
+
+        // Initialize page on load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Page loaded! JavaScript is working!');
+            
+            // Test Firestore connection
+            testFirestore();
+            
+            // Create test companies if needed
+            createTestCompanies();
+            
+            // Show company search immediately
+            showCompanySearch();
+        });
+
+        // Function to handle login
+        document.addEventListener('DOMContentLoaded', function() {
+            const loginForm = document.getElementById('loginForm');
+            if (loginForm) {
+                loginForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const email = document.getElementById('loginEmail').value;
+                    const password = document.getElementById('loginPassword').value;
+                    
+                    try {
+                        const userCredential = await auth.signInWithEmailAndPassword(email, password);
+                        const user = userCredential.user;
+                        
+                        // Check if user needs to change password
+                        const userDoc = await db.collection('users').doc(user.uid).get();
+                        if (userDoc.exists && userDoc.data().mustChangePassword) {
+                            showPasswordChangeModal();
+                        } else {
+                            showDashboard();
+                            document.getElementById('userName').textContent = user.email;
+                        }
+                    } catch (error) {
+                        console.error('Login error:', error);
+                        alert('Feil ved innlogging. Sjekk e-post og passord.');
+                    }
+                });
+            }
+        });
+
+        // Function to show add user modal
+        function showAddUserModal() {
+            document.getElementById('addUserModal').style.display = 'block';
+            loadDepartments();
+        }
+
+        // Function to hide add user modal
+        function hideAddUserModal() {
+            document.getElementById('addUserModal').style.display = 'none';
+        }
+
+        // Function to load departments for dropdown
+        async function loadDepartments() {
+            try {
+                const selectedCompanyId = localStorage.getItem('selectedCompanyId') || 'driftpro-40ccd';
+                const snapshot = await db.collection('departments').where('companyId', '==', selectedCompanyId).get();
+                const select = document.getElementById('userDepartment');
+                select.innerHTML = '<option value="">Velg avdeling</option>';
+                
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const option = document.createElement('option');
+                    option.value = doc.id;
+                    option.textContent = data.name;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading departments:', error);
+            }
+        }
+
+        // Function to handle add user form
+        document.addEventListener('DOMContentLoaded', function() {
+            const addUserForm = document.getElementById('addUserForm');
+            if (addUserForm) {
+                addUserForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const submitButton = e.target.querySelector('button[type="submit"]');
+                    submitButton.disabled = true;
+                    submitButton.textContent = 'Oppretter...';
+                    
+                    const name = document.getElementById('userName').value;
+                    const email = document.getElementById('userEmail').value;
+                    const departmentId = document.getElementById('userDepartment').value;
+                    const selectedCompanyId = localStorage.getItem('selectedCompanyId') || 'driftpro-40ccd';
+                    
+                    try {
+                        // Generate temporary password
+                        const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).toUpperCase().slice(-4) + '!1';
+                        
+                        // Create user in Firebase Auth
+                        const userCredential = await auth.createUserWithEmailAndPassword(email, tempPassword);
+                        const user = userCredential.user;
+                        
+                        // Store user data in Firestore
+                        await db.collection('users').doc(user.uid).set({
+                            name: name,
+                            email: email,
+                            departmentId: departmentId,
+                            companyId: selectedCompanyId,
+                            mustChangePassword: true,
+                            createdAt: new Date()
+                        });
+                        
+                        // Send email with temporary password (placeholder)
+                        console.log('Temporary password for', email, ':', tempPassword);
+                        
+                        alert(`Bruker opprettet! Midlertidig passord: ${tempPassword}`);
+                        hideAddUserModal();
+                        e.target.reset();
+                        
+                    } catch (error) {
+                        console.error('Error creating user:', error);
+                        alert('Feil ved opprettelse av bruker: ' + error.message);
+                    } finally {
+                        submitButton.disabled = false;
+                        submitButton.textContent = 'Opprett';
+                    }
+                });
+            }
+        });
+
+        // Function to show password change modal
+        function showPasswordChangeModal() {
+            document.getElementById('passwordChangeModal').style.display = 'block';
+        }
+
+        // Function to hide password change modal
+        function hidePasswordChangeModal() {
+            document.getElementById('passwordChangeModal').style.display = 'none';
+        }
+
+        // Function to handle password change
+        document.addEventListener('DOMContentLoaded', function() {
+            const passwordChangeForm = document.getElementById('passwordChangeForm');
+            if (passwordChangeForm) {
+                passwordChangeForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const newPassword = document.getElementById('newPassword').value;
+                    const confirmPassword = document.getElementById('confirmPassword').value;
+                    
+                    if (newPassword !== confirmPassword) {
+                        alert('Passordene matcher ikke!');
+                        return;
+                    }
+                    
+                    try {
+                        const user = auth.currentUser;
+                        await user.updatePassword(newPassword);
+                        
+                        // Update user document
+                        await db.collection('users').doc(user.uid).update({
+                            mustChangePassword: false
+                        });
+                        
+                        hidePasswordChangeModal();
+                        showDashboard();
+                        document.getElementById('userName').textContent = user.email;
+                        
+                    } catch (error) {
+                        console.error('Error changing password:', error);
+                        alert('Feil ved endring av passord: ' + error.message);
+                    }
+                });
+            }
+        });
+
+        // Function to logout
+        function logout() {
+            auth.signOut().then(() => {
+                localStorage.removeItem('selectedCompanyId');
+                showCompanySearch();
+            }).catch((error) => {
+                console.error('Logout error:', error);
+            });
+        }
+    </script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <!-- Loading Screen -->
+    <div id="loadingScreen" style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; background: #111827;">
+        <div style="text-align: center;">
+            <h1 style="font-size: 2rem; font-weight: bold; margin-bottom: 1rem;">Laster DriftPro Admin Panel...</h1>
+            <div style="width: 4rem; height: 4rem; border: 4px solid #374151; border-top: 4px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        </div>
+    </div>
+
+    <!-- Company Search Screen -->
+    <div id="companySearchScreen" style="display: none; flex-direction: column; justify-content: center; align-items: center; height: 100vh; background: #111827; padding: 2rem;">
+        <div style="max-width: 500px; width: 100%;">
+            <h1 style="font-size: 2rem; font-weight: bold; margin-bottom: 2rem; text-align: center;">Velg Bedrift</h1>
+            <input type="text" id="companySearchInput" placeholder="Skriv minst 2 bokstaver for å søke..." style="width: 100%; padding: 0.75rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; box-sizing: border-box;" oninput="searchCompanies(this.value)">
+            <div id="companySearchResults" style="margin-top: 1rem;"></div>
+        </div>
+    </div>
+
+    <!-- Login Screen -->
+    <div id="loginScreen" style="display: none; flex-direction: column; justify-content: center; align-items: center; height: 100vh; background: #111827; padding: 2rem;">
+        <div style="max-width: 400px; width: 100%;">
+            <h1 style="font-size: 2rem; font-weight: bold; margin-bottom: 2rem; text-align: center;">Logg Inn</h1>
+            <form id="loginForm" style="display: flex; flex-direction: column; gap: 1rem;">
+                <input type="email" id="loginEmail" placeholder="E-post" required style="padding: 0.75rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white;">
+                <input type="password" id="loginPassword" placeholder="Passord" required style="padding: 0.75rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white;">
+                <button type="submit" style="padding: 0.75rem; background: #3b82f6; border: none; border-radius: 0.5rem; color: white; font-weight: bold; cursor: pointer;">Logg Inn</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboard" style="display: none; padding: 2rem;">
+        <div style="max-width: 1200px; margin: 0 auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h1 style="font-size: 2rem; font-weight: bold;">DriftPro Admin Panel</h1>
+                <div style="display: flex; gap: 1rem; align-items: center;">
+                    <span id="userInfo">Logget inn som: <span id="userName"></span></span>
+                    <button onclick="logout()" style="padding: 0.5rem 1rem; background: #ef4444; border: none; border-radius: 0.5rem; color: white; cursor: pointer;">Logg Ut</button>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+                <!-- Users Card -->
+                <div style="background: #1f2937; border-radius: 1rem; padding: 2rem;">
+                    <h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem;">Ansatte</h2>
+                    <p style="color: #9ca3af; margin-bottom: 1rem;">Administrer ansatte og brukere</p>
+                    <button onclick="showAddUserModal()" style="padding: 0.75rem 1.5rem; background: #3b82f6; border: none; border-radius: 0.5rem; color: white; cursor: pointer;">Legg til Ansatt</button>
+                </div>
+
+                <!-- Departments Card -->
+                <div style="background: #1f2937; border-radius: 1rem; padding: 2rem;">
+                    <h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem;">Avdelinger</h2>
+                    <p style="color: #9ca3af; margin-bottom: 1rem;">Administrer avdelinger og organisasjon</p>
+                    <a href="/departments.html" style="padding: 0.75rem 1.5rem; background: #3b82f6; border: none; border-radius: 0.5rem; color: white; cursor: pointer; text-decoration: none; display: inline-block;">Gå til Avdelinger</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add User Modal -->
+    <div id="addUserModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 1000;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1f2937; padding: 2rem; border-radius: 1rem; max-width: 500px; width: 90%;">
+            <h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem;">Legg til Ansatt</h2>
+            <form id="addUserForm" style="display: flex; flex-direction: column; gap: 1rem;">
+                <input type="text" id="userName" placeholder="Navn" required style="padding: 0.75rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white;">
+                <input type="email" id="userEmail" placeholder="E-post" required style="padding: 0.75rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white;">
+                <select id="userDepartment" required style="padding: 0.75rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white;">
+                    <option value="">Velg avdeling</option>
+                </select>
+                <div style="display: flex; gap: 1rem;">
+                    <button type="submit" style="flex: 1; padding: 0.75rem; background: #3b82f6; border: none; border-radius: 0.5rem; color: white; cursor: pointer;">Opprett</button>
+                    <button type="button" onclick="hideAddUserModal()" style="flex: 1; padding: 0.75rem; background: #6b7280; border: none; border-radius: 0.5rem; color: white; cursor: pointer;">Avbryt</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Password Change Modal -->
+    <div id="passwordChangeModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 1000;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1f2937; padding: 2rem; border-radius: 1rem; max-width: 500px; width: 90%;">
+            <h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem;">Endre Passord</h2>
+            <p style="color: #9ca3af; margin-bottom: 1rem;">Du må endre passordet ditt ved første innlogging.</p>
+            <form id="passwordChangeForm" style="display: flex; flex-direction: column; gap: 1rem;">
+                <input type="password" id="newPassword" placeholder="Nytt passord" required style="padding: 0.75rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white;">
+                <input type="password" id="confirmPassword" placeholder="Bekreft nytt passord" required style="padding: 0.75rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white;">
+                <div style="display: flex; gap: 1rem;">
+                    <button type="submit" style="flex: 1; padding: 0.75rem; background: #3b82f6; border: none; border-radius: 0.5rem; color: white; cursor: pointer;">Endre Passord</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <style>
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</body>
+</html>
