@@ -29,7 +29,7 @@
             <div class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium mb-2">Søk etter bedrift</label>
-                    <input type="text" id="companySearch" placeholder="Skriv bedriftsnavn..." class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500">
+                    <input type="text" id="companySearch" placeholder="Skriv minst 2 bokstaver for å søke..." class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500">
                 </div>
                 
                 <div id="companyResults" class="space-y-2 max-h-60 overflow-y-auto">
@@ -508,7 +508,15 @@
             const noCompaniesDiv = document.getElementById('noCompaniesMessage');
 
             searchInput.addEventListener('input', function() {
-                const searchTerm = this.value.toLowerCase();
+                const searchTerm = this.value.trim().toLowerCase();
+                
+                // Don't show results if search term is too short
+                if (searchTerm.length < 2) {
+                    resultsDiv.innerHTML = '';
+                    noCompaniesDiv.classList.add('hidden');
+                    return;
+                }
+
                 const filteredCompanies = companies.filter(company => 
                     company.name.toLowerCase().includes(searchTerm)
                 );
@@ -517,17 +525,47 @@
                 noCompaniesDiv.classList.add('hidden');
 
                 if (filteredCompanies.length === 0) {
-                    if (searchTerm.length > 0) {
-                        noCompaniesDiv.classList.remove('hidden');
-                    }
+                    noCompaniesDiv.classList.remove('hidden');
                     return;
                 }
+
+                // Sort companies by relevance (exact matches first)
+                filteredCompanies.sort((a, b) => {
+                    const aName = a.name.toLowerCase();
+                    const bName = b.name.toLowerCase();
+                    
+                    // Exact match gets highest priority
+                    if (aName === searchTerm && bName !== searchTerm) return -1;
+                    if (bName === searchTerm && aName !== searchTerm) return 1;
+                    
+                    // Starts with search term gets second priority
+                    if (aName.startsWith(searchTerm) && !bName.startsWith(searchTerm)) return -1;
+                    if (bName.startsWith(searchTerm) && !aName.startsWith(searchTerm)) return 1;
+                    
+                    // Alphabetical order for same priority
+                    return aName.localeCompare(bName);
+                });
 
                 filteredCompanies.forEach(company => {
                     const companyDiv = document.createElement('div');
                     companyDiv.className = 'p-3 bg-gray-700 rounded-lg hover:bg-gray-600 cursor-pointer transition-colors';
+                    
+                    // Highlight matching text
+                    const companyName = company.name;
+                    const searchTermLower = searchTerm.toLowerCase();
+                    const companyNameLower = companyName.toLowerCase();
+                    const matchIndex = companyNameLower.indexOf(searchTermLower);
+                    
+                    let highlightedName = companyName;
+                    if (matchIndex !== -1) {
+                        const before = companyName.substring(0, matchIndex);
+                        const match = companyName.substring(matchIndex, matchIndex + searchTerm.length);
+                        const after = companyName.substring(matchIndex + searchTerm.length);
+                        highlightedName = `${before}<span class="bg-yellow-600 text-black px-1 rounded">${match}</span>${after}`;
+                    }
+                    
                     companyDiv.innerHTML = `
-                        <div class="font-medium">${company.name}</div>
+                        <div class="font-medium">${highlightedName}</div>
                         <div class="text-sm text-gray-400">Klikk for å velge</div>
                     `;
                     companyDiv.onclick = () => selectCompany(company);
@@ -535,8 +573,8 @@
                 });
             });
 
-            // Show all companies initially
-            searchInput.dispatchEvent(new Event('input'));
+            // Add placeholder text to guide users
+            searchInput.placeholder = "Skriv minst 2 bokstaver for å søke...";
         }
 
         function selectCompany(company) {
