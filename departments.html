@@ -461,7 +461,33 @@
         }
 
         function editDepartment(deptId) {
-            alert('Redigering av avdeling kommer snart!');
+        function saveDepartmentEdit(event) {
+            event.preventDefault();
+            
+            const deptId = document.getElementById("editDepartmentId").value;
+            const department = departments.find(d => d.id === deptId);
+            
+            if (department) {
+                department.name = document.getElementById("editDepartmentName").value;
+                department.code = document.getElementById("editDepartmentCode").value;
+                department.description = document.getElementById("editDepartmentDescription").value;
+                department.leaderId = document.getElementById("editDepartmentLeader").value || null;
+                department.status = document.getElementById("editDepartmentStatus").value;
+                department.maxEmployees = parseInt(document.getElementById("editMaxEmployees").value) || null;
+                department.budget = parseInt(document.getElementById("editDepartmentBudget").value) || null;
+                
+                hideEditDepartmentModal();
+                updateStatistics();
+                displayDepartments();
+                
+                alert("Avdeling oppdatert!");
+            }
+        }
+
+        function hideEditDepartmentModal() {
+            document.getElementById("editDepartmentModal").classList.add("hidden");
+            document.getElementById("editDepartmentForm").reset();
+        }
         }
 
         // Public functions for onclick handlers
