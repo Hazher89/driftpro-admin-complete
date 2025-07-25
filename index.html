@@ -25,237 +25,150 @@
         const auth = firebase.auth();
 
         console.log('Firebase initialized successfully');
-            console.log('Firebase config:', firebaseConfig);
-            console.log('Firestore instance:', db);
-            console.log('Auth instance:', auth);
-            
-        // Test function to check if Firestore is working
-        async function testFirestore() {
-            try {
-                await db.collection('test').doc('testDoc').set({ timestamp: firebase.firestore.FieldValue.serverTimestamp() });
-                console.log('Firestore test successful: Can write and read.');
-                return true;
-            } catch (error) {
-                console.error('Firestore test failed:', error);
-                return false;
-            }
-        }
+        console.log('Firebase config:', firebaseConfig);
+        console.log('Firestore instance:', db);
+        console.log('Auth instance:', auth);
 
-        // Function to create test companies if none exist
-        async function createTestCompanies() {
-            try {
-                console.log('Checking if test companies need to be created...');
-                const snapshot = await db.collection('companies').get();
-                
-                if (snapshot.empty) {
-                    console.log('No companies found, creating test companies...');
-                    const testCompanies = [
-                        { id: 'driftpro-40ccd', name: 'DriftPro', code: 'DP', createdAt: new Date() },
-                        { id: 'test-company', name: 'Test Bedrift', code: 'TB', createdAt: new Date() },
-                        { id: 'acme-corp', name: 'ACME Corporation', code: 'ACME', createdAt: new Date() },
-                        { id: 'tech-solutions', name: 'Tech Solutions AS', code: 'TS', createdAt: new Date() },
-                        { id: 'nordic-engineering', name: 'Nordic Engineering', code: 'NE', createdAt: new Date() }
-                    ];
-                    
-                    for (const company of testCompanies) {
-                        await db.collection('companies').doc(company.id).set(company);
-                    }
-                    console.log(`Created ${testCompanies.length} test companies.`);
-                } else {
-                    console.log('Companies already exist in Firestore.');
-                }
-            } catch (error) {
-                console.error('Error creating test companies:', error);
+        // Check if user is already logged in
+        auth.onAuthStateChanged(function(user) {
+            console.log('Auth state changed:', user);
+            if (user) {
+                // User is already logged in, show dashboard directly
+                console.log('User already logged in, showing dashboard');
+                document.getElementById('userName').textContent = user.email;
+                loadDashboardStats();
+                showDashboard();
+            } else {
+                // No user logged in, show company search
+                console.log('No user logged in, showing company search');
+                testFirestore();
+                createTestCompanies();
+                showCompanySearch();
             }
-        }
+        });
 
-        // Function to search companies from Firestore
-        async function searchCompanies(query) {
-            const resultsContainer = document.getElementById('companySearchResults');
-            
-            if (query.length < 2) {
-                resultsContainer.innerHTML = `
-                    <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #9ca3af; text-align: center;">
-                        Skriv minst 2 bokstaver for å søke etter bedrifter
-                    </div>
-                `;
-                return;
+        // Add timeout to prevent infinite loading
+        setTimeout(function() {
+            if (document.getElementById('loadingScreen').style.display !== 'none') {
+                console.log('Loading timeout reached, showing company search');
+                showCompanySearch();
             }
-            
+        }, 5000);
+
+        // Function to handle login
+        async function handleLogin(email, password) {
             try {
-                console.log('Searching for companies with query:', query);
+                const userCredential = await auth.signInWithEmailAndPassword(email, password);
+                const user = userCredential.user;
+                console.log('User logged in:', user.email);
                 
-                // Search in Firestore companies collection
-                const companiesRef = db.collection('companies');
-                console.log('Querying companies collection...');
-                const snapshot = await companiesRef.get();
-                console.log('Found', snapshot.size, 'companies in Firestore');
-                
-                const companies = [];
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    companies.push({
-                        id: doc.id,
-                        name: data.name || data.companyName || 'Ukjent navn',
-                        code: data.code || data.companyCode || doc.id
-                    });
-                });
-                
-                // Filter companies based on search query
-                const filteredCompanies = companies.filter(company => 
-                    company.name.toLowerCase().includes(query.toLowerCase()) || 
-                    company.code.toLowerCase().includes(query.toLowerCase())
-                );
-                
-                console.log('Filtered companies:', filteredCompanies);
-                
-                if (filteredCompanies.length === 0) {
-                    resultsContainer.innerHTML = `
-                        <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #9ca3af; text-align: center;">
-                            Ingen bedrifter funnet for "${query}"
-                        </div>
-                    `;
-                } else {
-                    resultsContainer.innerHTML = filteredCompanies.map(company => `
-                        <button onclick="selectCompany('${company.id}')" style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; cursor: pointer; text-align: left; transition: background 0.2s; margin-bottom: 0.5rem; width: 100%;">
-                            <div style="font-weight: bold; margin-bottom: 0.25rem;">${company.name}</div>
-                            <div style="font-size: 0.875rem; color: #9ca3af;">${company.code}</div>
-                        </button>
-                    `).join('');
+                // Check if user needs to change password
+                if (user.email === email && password === 'temp123') {
+                    alert('Du må endre passordet ditt ved første innlogging!');
+                    // Here you would typically redirect to a password change page
                 }
                 
+                showDashboard();
             } catch (error) {
-                console.error('Error searching companies:', error);
-                resultsContainer.innerHTML = `
-                    <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #ef4444; text-align: center;">
-                        Feil ved søk etter bedrifter. Prøv igjen.
-                    </div>
-                `;
+                console.error('Login error:', error);
+                alert('Innlogging feilet: ' + error.message);
             }
-        }
-
-        // Function to select a company
-        function selectCompany(companyId) {
-            console.log('Selected company:', companyId);
-            localStorage.setItem('selectedCompanyId', companyId);
-            showLogin();
         }
 
         // Function to show company search screen
         function showCompanySearch() {
-            console.log('Showing company search screen');
             document.getElementById('loadingScreen').style.display = 'none';
             document.getElementById('companySearchScreen').style.display = 'flex';
             document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('dashboardScreen').style.display = 'none';
         }
 
         // Function to show login screen
         function showLogin() {
-            console.log('Showing login screen');
             document.getElementById('loadingScreen').style.display = 'none';
             document.getElementById('companySearchScreen').style.display = 'none';
             document.getElementById('loginScreen').style.display = 'flex';
-            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('dashboardScreen').style.display = 'none';
         }
 
         // Function to show dashboard
         function showDashboard() {
-            console.log('Showing dashboard');
             document.getElementById('loadingScreen').style.display = 'none';
             document.getElementById('companySearchScreen').style.display = 'none';
             document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('dashboard').style.display = 'block';
-            
-            // Load dashboard stats
-            loadDashboardStats();
+            document.getElementById('dashboardScreen').style.display = 'block';
         }
 
-        // Initialize page on load
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM loaded, initializing Firebase...');
-            console.log('Page loaded! JavaScript is working!');
-            
-            // Initialize Firebase
-            const db = firebase.firestore();
-            const auth = firebase.auth();
-            
-            console.log('Firebase initialized successfully');
-            console.log('Firebase config:', firebaseConfig);
-            console.log('Firestore instance:', db);
-            console.log('Auth instance:', auth);
-            
-            // Check if user is already logged in
-            auth.onAuthStateChanged(function(user) {
-            // Add timeout to prevent infinite loading
-            setTimeout(function() {
-                if (document.getElementById('loadingScreen').style.display !== 'none') {
-                    console.log('Loading timeout reached, showing company search');
-                    showCompanySearch();
-                }
-            }, 5000);
-                console.log('Auth state changed:', user);
-                if (user) {
-                    // User is already logged in, show dashboard directly
-                    console.log('User already logged in, showing dashboard');
-                    document.getElementById('userName').textContent = user.email;
-                    loadDashboardStats();
-                    showDashboard();
-                } else {
-                    // No user logged in, show company search
-                    console.log('No user logged in, showing company search');
-                    testFirestore();
-                    createTestCompanies();
-                    showCompanySearch();
-                }
-            });
-        });
-        
-        // Function to handle login
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM loaded, initializing Firebase...');
-            const loginForm = document.getElementById('loginForm');
-            if (loginForm) {
-                loginForm.addEventListener('submit', async function(e) {
-                    e.preventDefault();
-                    
-                    const email = document.getElementById('loginEmail').value;
-                    const password = document.getElementById('loginPassword').value;
-                    
-                    try {
-                        const userCredential = await auth.signInWithEmailAndPassword(email, password);
-                        const user = userCredential.user;
-                        
-                        // Check if user needs to change password
-                        const userDoc = await db.collection('users').doc(user.uid).get();
-                        if (userDoc.exists && userDoc.data().mustChangePassword) {
-                            showPasswordChangeModal();
-                        } else {
-                            showDashboard();
-                            document.getElementById('userName').textContent = user.email;
-                        }
-                    } catch (error) {
-                        console.error('Login error:', error);
-                        alert('Feil ved innlogging. Sjekk e-post og passord.');
-                    }
-                });
+        // Function to search companies
+        async function searchCompanies(query) {
+            if (query.length < 2) {
+                document.getElementById('companySearchResults').innerHTML = '';
+                return;
             }
-        });
 
-        // Function to show add user modal
-        // Function to show add department modal
-        function showAddDepartmentModal() {
-            alert('Avdeling funksjonalitet kommer snart!');
+            try {
+                const snapshot = await db.collection('companies').where('name', '>=', query).where('name', '<=', query + '\uf8ff').get();
+                const results = [];
+                snapshot.forEach(doc => {
+                    results.push({ id: doc.id, ...doc.data() });
+                });
+
+                const resultsDiv = document.getElementById('companySearchResults');
+                if (results.length === 0) {
+                    resultsDiv.innerHTML = '<p class="text-gray-400 mt-2">Ingen bedrifter funnet</p>';
+                } else {
+                    resultsDiv.innerHTML = results.map(company => `
+                        <div class="bg-gray-800 p-4 rounded-lg mt-2 cursor-pointer hover:bg-gray-700" onclick="selectCompany('${company.id}', '${company.name}')">
+                            <h3 class="text-lg font-semibold">${company.name}</h3>
+                            <p class="text-gray-400">${company.description || 'Ingen beskrivelse'}</p>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error searching companies:', error);
+                document.getElementById('companySearchResults').innerHTML = '<p class="text-red-400 mt-2">Feil ved søk: ' + error.message + '</p>';
+            }
         }
 
-        // Function to show add deviation modal
-        function showAddDeviationModal() {
-            alert('Avvik funksjonalitet kommer snart!');
+        // Function to select company
+        function selectCompany(companyId, companyName) {
+            localStorage.setItem('selectedCompanyId', companyId);
+            localStorage.setItem('selectedCompanyName', companyName);
+            console.log('Selected company:', companyId, companyName);
+            showLogin();
         }
 
-        // Function to show add shift modal
-        function showAddShiftModal() {
-            alert('Skiftplaner funksjonalitet kommer snart!');
+        // Function to test Firestore connection
+        async function testFirestore() {
+            try {
+                const snapshot = await db.collection('companies').limit(1).get();
+                console.log('Firestore connection test successful, found', snapshot.size, 'companies');
+            } catch (error) {
+                console.error('Firestore connection test failed:', error);
+            }
+        }
+
+        // Function to create test companies
+        async function createTestCompanies() {
+            try {
+                const snapshot = await db.collection('companies').get();
+                if (snapshot.empty) {
+                    console.log('Creating test companies...');
+                    await db.collection('companies').add({
+                        name: 'DriftPro AS',
+                        description: 'Hovedkontor',
+                        companyId: 'driftpro-40ccd'
+                    });
+                    await db.collection('companies').add({
+                        name: 'DriftPro Nord',
+                        description: 'Nordisk avdeling',
+                        companyId: 'driftpro-nord'
+                    });
+                    console.log('Test companies created');
+                }
+            } catch (error) {
+                console.error('Error creating test companies:', error);
+            }
         }
 
         // Function to load dashboard stats
@@ -267,7 +180,7 @@
                 console.error('Error loading dashboard stats:', error);
             }
         }
-        
+
         // Function to load all Firestore data
         async function loadAllFirestoreData() {
             try {
@@ -344,7 +257,7 @@
                 console.error('Error loading Firestore data:', error);
             }
         }
-        
+
         // Function to update dashboard with all data
         function updateDashboardWithData(data) {
             const statsContainer = document.getElementById('dashboardStats');
@@ -382,21 +295,14 @@
                     
                     <div class="bg-white rounded-lg shadow p-6">
                         <div class="flex items-center">
-                            <div class="div class="p-3 rounded-full bg-purple-100 text-purple-600">
+                            <div class="p-3 rounded-full bg-purple-100 text-purple-600">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
                                 </svg>
                             </div>
                             <div class="ml-4">
-                                <div class="p-3 rounded-full bg-purple-100 text-purple-600">
-                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-                                    </svg>
-                                </div>
-                                <div class="ml-4">
-                                    <p class="text-sm font-medium text-gray-600">Avdelinger</p>
-                                    <p class="text-2xl font-semibold text-gray-900">${data.departments.length}</p>
-                                </div>
+                                <p class="text-sm font-medium text-gray-600">Avdelinger</p>
+                                <p class="text-2xl font-semibold text-gray-900">${data.departments.length}</p>
                             </div>
                         </div>
                     </div>
@@ -435,8 +341,10 @@
                                         </div>
                                     </div>
                                     <span class="text-sm text-gray-500">${employee.department || 'Ingen avdeling'}</span>
-                            `).join('''')
-                            ${data.employees.length === 0 ? '<p class="text-gray-500 text-sm">Ingen ansatte funnet</p>' : '}
+                                </div>
+                            `).join('')}
+                            ${data.employees.length === 0 ? '<p class="text-gray-500 text-sm">Ingen ansatte funnet</p>' : ''}
+                        </div>
                     </div>
                     
                     <!-- Recent Deviations -->
@@ -450,7 +358,7 @@
                                     <div class="flex items-center">
                                         <div class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
                                             <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h12.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
                                             </svg>
                                         </div>
                                         <div class="ml-3">
@@ -460,8 +368,8 @@
                                     </div>
                                     <span class="text-sm text-gray-500">${deviation.status || 'Åpen'}</span>
                                 </div>
-                            `).join('''')
-                            ${data.deviations.length === 0 ? '<p class="text-gray-500 text-sm">Ingen avvik funnet</p>' : '}
+                            `).join('')}
+                            ${data.deviations.length === 0 ? '<p class="text-gray-500 text-sm">Ingen avvik funnet</p>' : ''}
                         </div>
                     </div>
                 </div>
@@ -476,25 +384,25 @@
                             <div class="bg-blue-50 p-4 rounded">
                                 <h4 class="font-medium text-blue-900">Bedrifter (${data.companies.length})</h4>
                                 <ul class="mt-2 text-blue-700">
-                                    ${data.companies.map(company => `<li>• ${company.name || company.id}</li>`).join('''')
+                                    ${data.companies.map(company => `<li>• ${company.name || company.id}</li>`).join('')}
                                 </ul>
                             </div>
                             <div class="bg-green-50 p-4 rounded">
                                 <h4 class="font-medium text-green-900">Avdelinger (${data.departments.length})</h4>
                                 <ul class="mt-2 text-green-700">
-                                    ${data.departments.map(dept => `<li>• ${dept.name || dept.id}</li>`).join('''')
+                                    ${data.departments.map(dept => `<li>• ${dept.name || dept.id}</li>`).join('')}
                                 </ul>
                             </div>
                             <div class="bg-purple-50 p-4 rounded">
                                 <h4 class="font-medium text-purple-900">Skift (${data.shifts.length})</h4>
                                 <ul class="mt-2 text-purple-700">
-                                    ${data.shifts.map(shift => `<li>• ${shift.title || shift.id}</li>`).join('''')
+                                    ${data.shifts.map(shift => `<li>• ${shift.title || shift.id}</li>`).join('')}
                                 </ul>
                             </div>
                             <div class="bg-yellow-50 p-4 rounded">
                                 <h4 class="font-medium text-yellow-900">Dokumenter (${data.documents.length})</h4>
                                 <ul class="mt-2 text-yellow-700">
-                                    ${data.documents.map(doc => `<li>• ${doc.title || doc.id}</li>`).join('''')
+                                    ${data.documents.map(doc => `<li>• ${doc.title || doc.id}</li>`).join('')}
                                 </ul>
                             </div>
                         </div>
@@ -502,10 +410,9 @@
                 </div>
             `;
         }
-                console.error('Error loading dashboard stats:', error);
-            }
-        }
-                function showAddUserModal() {
+
+        // Function to show add user modal
+        function showAddUserModal() {
             document.getElementById('addUserModal').style.display = 'block';
             loadDepartments();
         }
@@ -522,12 +429,12 @@
                 const snapshot = await db.collection('departments').where('companyId', '==', selectedCompanyId).get();
                 const select = document.getElementById('userDepartment');
                 select.innerHTML = '<option value="">Velg avdeling</option>';
-                
+
                 snapshot.forEach(doc => {
-                    const data = doc.data();
+                    const department = doc.data();
                     const option = document.createElement('option');
                     option.value = doc.id;
-                    option.textContent = data.name;
+                    option.textContent = department.name;
                     select.appendChild(option);
                 });
             } catch (error) {
@@ -535,116 +442,52 @@
             }
         }
 
-        // Function to handle add user form
+        // Function to create user
+        async function createUser() {
+            const name = document.getElementById('userName').value;
+            const email = document.getElementById('userEmail').value;
+            const department = document.getElementById('userDepartment').value;
+            const role = document.getElementById('userRole').value;
+
+            if (!name || !email || !department || !role) {
+                alert('Vennligst fyll ut alle feltene');
+                return;
+            }
+
+            try {
+                const selectedCompanyId = localStorage.getItem('selectedCompanyId') || 'driftpro-40ccd';
+                const userData = {
+                    name: name,
+                    email: email,
+                    department: department,
+                    role: role,
+                    companyId: selectedCompanyId,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    status: 'active'
+                };
+
+                await db.collection('users').add(userData);
+                console.log('User created successfully');
+                alert('Bruker opprettet!');
+                hideAddUserModal();
+                loadDashboardStats();
+            } catch (error) {
+                console.error('Error creating user:', error);
+                alert('Feil ved opprettelse av bruker: ' + error.message);
+            }
+        }
+
+        // Initialize when DOM is loaded
         document.addEventListener('DOMContentLoaded', function() {
             console.log('DOM loaded, initializing Firebase...');
-            const addUserForm = document.getElementById('addUserForm');
-            if (addUserForm) {
-                addUserForm.addEventListener('submit', async function(e) {
-                    e.preventDefault();
-                    
-                    const submitButton = e.target.querySelector('button[type="submit"]');
-                    submitButton.disabled = true;
-                    submitButton.textContent = 'Oppretter...';
-                    
-                    const name = document.getElementById('userName').value;
-                    const email = document.getElementById('userEmail').value;
-                    const departmentId = document.getElementById('userDepartment').value;
-                    const selectedCompanyId = localStorage.getItem('selectedCompanyId') || 'driftpro-40ccd';
-                    
-                    try {
-                        // Generate temporary password
-                        const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).toUpperCase().slice(-4) + '!1';
-                        
-                        // Create user in Firebase Auth
-                        const userCredential = await auth.createUserWithEmailAndPassword(email, tempPassword);
-                        const user = userCredential.user;
-                        
-                        // Store user data in Firestore
-                        await db.collection('users').doc(user.uid).set({
-                            name: name,
-                            email: email,
-                            departmentId: departmentId,
-                            companyId: selectedCompanyId,
-                            mustChangePassword: true,
-                            createdAt: new Date()
-                        });
-                        
-                        // Send email with temporary password (placeholder)
-                        console.log('Temporary password for', email, ':', tempPassword);
-                        
-                        alert(`Bruker opprettet! Midlertidig passord: ${tempPassword}`);
-                        hideAddUserModal();
-                        e.target.reset();
-                        
-                    } catch (error) {
-                        console.error('Error creating user:', error);
-                        alert('Feil ved opprettelse av bruker: ' + error.message);
-                    } finally {
-                        submitButton.disabled = false;
-                        submitButton.textContent = 'Opprett';
-                    }
-                });
-            }
         });
-
-        // Function to show password change modal
-        function showPasswordChangeModal() {
-            document.getElementById('passwordChangeModal').style.display = 'block';
-        }
-
-        // Function to hide password change modal
-        function hidePasswordChangeModal() {
-            document.getElementById('passwordChangeModal').style.display = 'none';
-        }
-
-        // Function to handle password change
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM loaded, initializing Firebase...');
-            const passwordChangeForm = document.getElementById('passwordChangeForm');
-            if (passwordChangeForm) {
-                passwordChangeForm.addEventListener('submit', async function(e) {
-                    e.preventDefault();
-                    
-                    const newPassword = document.getElementById('newPassword').value;
-                    const confirmPassword = document.getElementById('confirmPassword').value;
-                    
-                    if (newPassword !== confirmPassword) {
-                        alert('Passordene matcher ikke!');
-                        return;
-                    }
-                    
-                    try {
-                        const user = auth.currentUser;
-                        await user.updatePassword(newPassword);
-                        
-                        // Update user document
-                        await db.collection('users').doc(user.uid).update({
-                            mustChangePassword: false
-                        });
-                        
-                        hidePasswordChangeModal();
-                        showDashboard();
-                        document.getElementById('userName').textContent = user.email;
-                        
-                    } catch (error) {
-                        console.error('Error changing password:', error);
-                        alert('Feil ved endring av passord: ' + error.message);
-                    }
-                });
-            }
-        });
-
-        // Function to logout
-        function logout() {
-            auth.signOut().then(() => {
-                localStorage.removeItem('selectedCompanyId');
-                showCompanySearch();
-            }).catch((error) => {
-                console.error('Logout error:', error);
-            });
-        }
     </script>
+    <style>
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body class="bg-gray-900 text-white min-h-screen">
     <!-- Loading Screen -->
@@ -665,238 +508,166 @@
     </div>
 
     <!-- Login Screen -->
-    <!-- Dashboard -->
-    <div id="dashboard" style="display: none; padding: 2rem;">
-        <div style="max-width: 1400px; margin: 0 auto;">
-            <!-- Header -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid #374151;">
-                <div>
-                    <h1 style="font-size: 2rem; font-weight: bold; color: white;">DriftPro Admin Panel</h1>
-                    <p style="color: #9ca3af; margin-top: 0.5rem;">Administrer bedrift, ansatte og drift</p>
-                </div>
-                <div style="display: flex; gap: 1rem; align-items: center;">
-                    <span id="userInfo" style="color: #9ca3af;">Logget inn som: <span id="userName" style="color: white; font-weight: bold;"></span></span>
-                    <button onclick="logout()" style="padding: 0.5rem 1rem; background: #ef4444; border: none; border-radius: 0.5rem; color: white; cursor: pointer; transition: background 0.2s;">Logg Ut</button>
-                </div>
-            </div>
-
-            <!-- Stats Cards -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
-                <div style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); border-radius: 1rem; padding: 1.5rem; color: white;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <h3 style="font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem;">Totale Ansatte</h3>
-                            <p style="font-size: 2rem; font-weight: bold;" id="totalEmployees">0</p>
-                        </div>
-                        <div style="font-size: 2rem;">👥</div>
-                    </div>
-                </div>
-                <div style="background: linear-gradient(135deg, #10b981, #059669); border-radius: 1rem; padding: 1.5rem; color: white;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <h3 style="font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem;">Aktive Avdelinger</h3>
-                            <p style="font-size: 2rem; font-weight: bold;" id="totalDepartments">0</p>
-                        </div>
-                        <div style="font-size: 2rem;">🏢</div>
-                    </div>
-                </div>
-                <div style="background: linear-gradient(135deg, #f59e0b, #d97706); border-radius: 1rem; padding: 1.5rem; color: white;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <h3 style="font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem;">Åpne Avvik</h3>
-                            <p style="font-size: 2rem; font-weight: bold;" id="openDeviations">0</p>
-                        </div>
-                        <div style="font-size: 2rem;">⚠️</div>
-                    </div>
-                </div>
-                <div style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); border-radius: 1rem; padding: 1.5rem; color: white;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <h3 style="font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem;">Aktive Skift</h3>
-                            <p style="font-size: 2rem; font-weight: bold;" id="activeShifts">0</p>
-                        </div>
-                        <div style="font-size: 2rem;">🕐</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Main Content Grid -->
-            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
-                <!-- Left Column -->
-                <div style="display: flex; flex-direction: column; gap: 2rem;">
-                    <!-- Quick Actions -->
-                    <div style="background: #1f2937; border-radius: 1rem; padding: 2rem;">
-                        <h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1.5rem; color: white;">Hurtig Handlinger</h2>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-                            <button onclick="showAddUserModal()" style="padding: 1rem; background: #3b82f6; border: none; border-radius: 0.5rem; color: white; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; gap: 0.5rem;">
-                                <span style="font-size: 1.25rem;">➕</span>
-                                <span>Legg til Ansatt</span>
-                            </button>
-                            <button onclick="showAddDepartmentModal()" style="padding: 1rem; background: #10b981; border: none; border-radius: 0.5rem; color: white; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; gap: 0.5rem;">
-                                <span style="font-size: 1.25rem;">🏢</span>
-                                <span>Ny Avdeling</span>
-                            </button>
-                            <button onclick="showAddDeviationModal()" style="padding: 1rem; background: #f59e0b; border: none; border-radius: 0.5rem; color: white; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; gap: 0.5rem;">
-                                <span style="font-size: 1.25rem;">⚠️</span>
-                                <span>Rapporter Avvik</span>
-                            </button>
-                            <button onclick="showAddShiftModal()" style="padding: 1rem; background: #8b5cf6; border: none; border-radius: 0.5rem; color: white; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; gap: 0.5rem;">
-                                <span style="font-size: 1.25rem;">🕐</span>
-                                <span>Planlegg Skift</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Recent Activity -->
-                    <div style="background: #1f2937; border-radius: 1rem; padding: 2rem;">
-                        <h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1.5rem; color: white;">Siste Aktivitet</h2>
-                        <div id="recentActivity" style="display: flex; flex-direction: column; gap: 1rem;">
-                            <div style="padding: 1rem; background: #374151; border-radius: 0.5rem; border-left: 4px solid #3b82f6;">
-                                <div style="display: flex; justify-content: space-between; align-items: center;">
-                                    <div>
-                                        <p style="font-weight: bold; color: white;">Ny ansatt registrert</p>
-                                        <p style="color: #9ca3af; font-size: 0.875rem;">John Doe ble lagt til i IT-avdelingen</p>
-                                    </div>
-                                    <span style="color: #9ca3af; font-size: 0.875rem;">2 min siden</span>
-                                </div>
-                            </div>
-                            <div style="padding: 1rem; background: #374151; border-radius: 0.5rem; border-left: 4px solid #f59e0b;">
-                                <div style="display: flex; justify-content: space-between; align-items: center;">
-                                    <div>
-                                        <p style="font-weight: bold; color: white;">Avvik rapportert</p>
-                                        <p style="color: #9ca3af; font-size: 0.875rem;">Sikkerhetsbrudd i bygg A</p>
-                                    </div>
-                                    <span style="color: #9ca3af; font-size: 0.875rem;">15 min siden</span>
-                                </div>
-                            </div>
-                            <div style="padding: 1rem; background: #374151; border-radius: 0.5rem; border-left: 4px solid #10b981;">
-                                <div style="display: flex; justify-content: space-between; align-items: center;">
-                                    <div>
-                                        <p style="font-weight: bold; color: white;">Skift endret</p>
-                                        <p style="color: #9ca3af; font-size: 0.875rem;">Natteskift for produksjon oppdatert</p>
-                                    </div>
-                                    <span style="color: #9ca3af; font-size: 0.875rem;">1 time siden</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Right Column -->
-                <div style="display: flex; flex-direction: column; gap: 2rem;">
-                    <!-- Navigation Cards -->
-                    <div style="background: #1f2937; border-radius: 1rem; padding: 2rem;">
-                        <h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1.5rem; color: white;">Navigasjon</h2>
-                        <div style="display: flex; flex-direction: column; gap: 1rem;">
-                            <a href="/departments.html" style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; text-decoration: none; transition: background 0.2s; display: flex; align-items: center; gap: 0.5rem;">
-                                <span style="font-size: 1.25rem;">��</span>
-                                <span>Avdelinger</span>
-                                <span style="margin-left: auto; color: #9ca3af;">→</span>
-                            </a>
-                            <a href="/employees.html" style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; text-decoration: none; transition: background 0.2s; display: flex; align-items: center; gap: 0.5rem;">
-                                <span style="font-size: 1.25rem;">👥</span>
-                                <span>Ansatte</span>
-                                <span style="margin-left: auto; color: #9ca3af;">→</span>
-                            </a>
-                            <a href="/deviations.html" style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; text-decoration: none; transition: background 0.2s; display: flex; align-items: center; gap: 0.5rem;">
-                                <span style="font-size: 1.25rem;">⚠️</span>
-                                <span>Avvik</span>
-                                <span style="margin-left: auto; color: #9ca3af;">→</span>
-                            </a>
-                            <a href="/shifts.html" style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; text-decoration: none; transition: background 0.2s; display: flex; align-items: center; gap: 0.5rem;">
-                                <span style="font-size: 1.25rem;">🕐</span>
-                                <span>Skiftplaner</span>
-                                <span style="margin-left: auto; color: #9ca3af;">→</span>
-                            </a>
-                            <a href="/chat.html" style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; text-decoration: none; transition: background 0.2s; display: flex; align-items: center; gap: 0.5rem;">
-                                <span style="font-size: 1.25rem;">💬</span>
-                                <span>Chat</span>
-                                <span style="margin-left: auto; color: #9ca3af;">→</span>
-                            </a>
-                            <a href="/documents.html" style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; text-decoration: none; transition: background 0.2s; display: flex; align-items: center; gap: 0.5rem;">
-                                <span style="font-size: 1.25rem;">��</span>
-                                <span>Dokumenter</span>
-                                <span style="margin-left: auto; color: #9ca3af;">→</span>
-                            </a>
-                        </div>
-                    </div>
-
-                    <!-- Quick Stats -->
-                    <div style="background: #1f2937; border-radius: 1rem; padding: 2rem;">
-                        <h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1.5rem; color: white;">Hurtig Statistikk</h2>
-                        <div style="display: flex; flex-direction: column; gap: 1rem;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: #374151; border-radius: 0.5rem;">
-                                <span style="color: #9ca3af;">Dagens skift</span>
-                                <span style="color: white; font-weight: bold;">3 aktive</span>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: #374151; border-radius: 0.5rem;">
-                                <span style="color: #9ca3af;">Ubehandlede avvik</span>
-                                <span style="color: white; font-weight: bold;">5 stk</span>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: #374151; border-radius: 0.5rem;">
-                                <span style="color: #9ca3af;">Aktive chatrom</span>
-                                <span style="color: white; font-weight: bold;">2 stk</span>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: #374151; border-radius: 0.5rem;">
-                                <span style="color: #9ca3af;">Nye dokumenter</span>
-                                <span style="color: white; font-weight: bold;">12 stk</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
     <div id="loginScreen" style="display: none; flex-direction: column; justify-content: center; align-items: center; height: 100vh; background: #111827; padding: 2rem;">
         <div style="max-width: 400px; width: 100%;">
             <h1 style="font-size: 2rem; font-weight: bold; margin-bottom: 2rem; text-align: center;">Logg Inn</h1>
-            <form id="loginForm" style="display: flex; flex-direction: column; gap: 1rem;">
-                <input type="email" id="loginEmail" placeholder="E-post" required style="padding: 0.75rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white;">
-                <input type="password" id="loginPassword" placeholder="Passord" required style="padding: 0.75rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white;">
-                <button type="submit" style="padding: 0.75rem; background: #3b82f6; border: none; border-radius: 0.5rem; color: white; font-weight: bold; cursor: pointer;">Logg Inn</button>
-            </form>
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: #d1d5db;">E-post</label>
+                <input type="email" id="loginEmail" placeholder="din@email.com" style="width: 100%; padding: 0.75rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; box-sizing: border-box;">
+            </div>
+            <div style="margin-bottom: 2rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: #d1d5db;">Passord</label>
+                <input type="password" id="loginPassword" placeholder="Passord" style="width: 100%; padding: 0.75rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; box-sizing: border-box;">
+            </div>
+            <button onclick="handleLogin(document.getElementById('loginEmail').value, document.getElementById('loginPassword').value)" style="width: 100%; padding: 0.75rem; background: #3b82f6; color: white; border: none; border-radius: 0.5rem; font-weight: bold; cursor: pointer; margin-bottom: 1rem;">Logg Inn</button>
+            <button onclick="showCompanySearch()" style="width: 100%; padding: 0.75rem; background: #6b7280; color: white; border: none; border-radius: 0.5rem; font-weight: bold; cursor: pointer;">Tilbake</button>
         </div>
     </div>
 
+    <!-- Dashboard Screen -->
+    <div id="dashboardScreen" style="display: none;">
+        <!-- Header -->
+        <header class="bg-white shadow">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center py-6">
+                    <div class="flex items-center">
+                        <h1 class="text-3xl font-bold text-gray-900">DriftPro Admin Panel</h1>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <span class="text-gray-700">Logget inn som: <span id="userName" class="font-semibold"></span></span>
+                        <button onclick="auth.signOut()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium">Logg Ut</button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main content -->
+        <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+            <!-- Navigation -->
+            <div class="px-4 py-6 sm:px-0">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
+                    <a href="/employees.html" class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                </svg>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-900">Ansatte</p>
+                            </div>
+                        </div>
+                    </a>
+                    
+                    <a href="/departments.html" class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-purple-100 text-purple-600">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                                </svg>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-900">Avdelinger</p>
+                            </div>
+                        </div>
+                    </a>
+                    
+                    <a href="/deviations.html" class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-red-100 text-red-600">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                                </svg>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-900">Avvik</p>
+                            </div>
+                        </div>
+                    </a>
+                    
+                    <a href="/shifts.html" class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-900">Skiftplaner</p>
+                            </div>
+                        </div>
+                    </a>
+                    
+                    <a href="/chat.html" class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-green-100 text-green-600">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                                </svg>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-900">Chat</p>
+                            </div>
+                        </div>
+                    </a>
+                    
+                    <a href="/documents.html" class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-indigo-100 text-indigo-600">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-900">Dokumenter</p>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+
+                <!-- Dashboard Stats -->
+                <div id="dashboardStats">
+                    <div class="text-center py-12">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                        <p class="mt-2 text-sm text-gray-600">Laster dashboard data...</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
 
     <!-- Add User Modal -->
-    <div id="addUserModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 1000;">
-        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1f2937; padding: 2rem; border-radius: 1rem; max-width: 500px; width: 90%;">
-            <h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem;">Legg til Ansatt</h2>
-            <form id="addUserForm" style="display: flex; flex-direction: column; gap: 1rem;">
-                <input type="text" id="userName" placeholder="Navn" required style="padding: 0.75rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white;">
-                <input type="email" id="userEmail" placeholder="E-post" required style="padding: 0.75rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white;">
-                <select id="userDepartment" required style="padding: 0.75rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white;">
+    <div id="addUserModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 2rem; border-radius: 0.5rem; width: 90%; max-width: 500px;">
+            <h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem; color: #1f2937;">Legg til ny bruker</h2>
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: #374151;">Navn</label>
+                <input type="text" id="userName" placeholder="Fullt navn" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; box-sizing: border-box;">
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: #374151;">E-post</label>
+                <input type="email" id="userEmail" placeholder="email@example.com" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; box-sizing: border-box;">
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: #374151;">Avdeling</label>
+                <select id="userDepartment" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; box-sizing: border-box;">
                     <option value="">Velg avdeling</option>
                 </select>
-                <div style="display: flex; gap: 1rem;">
-                    <button type="submit" style="flex: 1; padding: 0.75rem; background: #3b82f6; border: none; border-radius: 0.5rem; color: white; cursor: pointer;">Opprett</button>
-                    <button type="button" onclick="hideAddUserModal()" style="flex: 1; padding: 0.75rem; background: #6b7280; border: none; border-radius: 0.5rem; color: white; cursor: pointer;">Avbryt</button>
-                </div>
-            </form>
+            </div>
+            <div style="margin-bottom: 2rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: #374151;">Rolle</label>
+                <select id="userRole" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; box-sizing: border-box;">
+                    <option value="">Velg rolle</option>
+                    <option value="admin">Administrator</option>
+                    <option value="manager">Leder</option>
+                    <option value="employee">Ansatt</option>
+                </select>
+            </div>
+            <div style="display: flex; gap: 1rem;">
+                <button onclick="createUser()" style="flex: 1; padding: 0.75rem; background: #3b82f6; color: white; border: none; border-radius: 0.5rem; font-weight: bold; cursor: pointer;">Opprett</button>
+                <button onclick="hideAddUserModal()" style="flex: 1; padding: 0.75rem; background: #6b7280; color: white; border: none; border-radius: 0.5rem; font-weight: bold; cursor: pointer;">Avbryt</button>
+            </div>
         </div>
     </div>
-
-    <!-- Password Change Modal -->
-    <div id="passwordChangeModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 1000;">
-        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1f2937; padding: 2rem; border-radius: 1rem; max-width: 500px; width: 90%;">
-            <h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem;">Endre Passord</h2>
-            <p style="color: #9ca3af; margin-bottom: 1rem;">Du må endre passordet ditt ved første innlogging.</p>
-            <form id="passwordChangeForm" style="display: flex; flex-direction: column; gap: 1rem;">
-                <input type="password" id="newPassword" placeholder="Nytt passord" required style="padding: 0.75rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white;">
-                <input type="password" id="confirmPassword" placeholder="Bekreft nytt passord" required style="padding: 0.75rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white;">
-                <div style="display: flex; gap: 1rem;">
-                    <button type="submit" style="flex: 1; padding: 0.75rem; background: #3b82f6; border: none; border-radius: 0.5rem; color: white; cursor: pointer;">Endre Passord</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <style>
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
 </body>
 </html>
