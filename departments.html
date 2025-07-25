@@ -57,7 +57,7 @@
             try {
                 console.log("Fetching departments..."); const snapshot = await db.collection('departments')
                     .where('companyId', '==', currentCompanyId)
-                    .orderBy('name')
+                    
                     .get();
                 
                 departments = [];
@@ -76,8 +76,8 @@
             try {
                 console.log("Fetching departments..."); const snapshot = await db.collection('users')
                     .where('companyId', '==', currentCompanyId)
-                    .where('role', 'in', ['employee', 'admin'])
-                    .orderBy('name')
+                    
+                    
                     .get();
                 
                 employees = [];
