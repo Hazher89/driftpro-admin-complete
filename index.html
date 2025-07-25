@@ -15,9 +15,6 @@
         <div class="text-center">
             <div class="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500 mx-auto"></div>
             <p class="mt-4 text-gray-400">Laster DriftPro Admin Panel...</p>
-            <button onclick="showLogin()" class="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg">
-                Gå til login
-            </button>    </div>
 
     <!-- Company Search Screen -->
     <div id="companySearchScreen" class="min-h-screen flex items-center justify-center hidden">
@@ -505,18 +502,11 @@
 
         // Initialize app
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM loaded, initializing app...');
+            console.log('DOM loaded, going directly to login...');
             
-            // Immediately show company search to avoid loading issues
-            showCompanySearch();
-            
-            // Also add timeout as backup
-            setTimeout(() => {
-                console.log('Timeout reached, showing company search...');
-                showCompanySearch();
-            }, 2000);
-        });        
-        function setupCompanySearch() {
+            // Go directly to login screen
+            showLogin();
+        });        function setupCompanySearch() {
             console.log('Setting up company search...');
             // For now, just show a simple company selection
             const companyResults = document.getElementById('companyResults');
