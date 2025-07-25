@@ -7,6 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         function goToDashboard() {
+            // Always go to dashboard if user is logged in
+            window.location.href = "/dashboard.html";
             // Check if user is logged in and go directly to dashboard
             if (localStorage.getItem('selectedCompanyId')) {
                 window.location.href = "/dashboard.html";

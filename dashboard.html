@@ -32,8 +32,10 @@
                 loadDashboardStats();
             } else {
                 // No user is signed in, redirect to main page
+                console.log('No user logged in, redirecting to main page');
                 window.location.href = '/';
             }
+        });
         });
 
         // Function to load dashboard stats
