@@ -157,22 +157,20 @@
                 const userData = userDoc.data();
                 const userRole = userData?.role;
                 
-                // Show DriftPro Admin card only for driftpro-admin users
+                // Show DriftPro Admin card only for users in DriftPro company (companyId: "driftpro")
                 const driftproAdminCard = document.getElementById("driftproAdminCard");
                 if (driftproAdminCard) {
-                    if (userRole === "driftpro-admin") {
+                    if (companyId === "driftpro") {
                         driftproAdminCard.style.display = "block";
                     } else {
-                        driftproAdminCard.style.display = "none";
-                    }
-                }                const companyId = userData?.companyId;
+                }                
                 
                 if (!companyId) {
                     console.error('No company ID found for user - GDPR compliance issue');
                     return;
                 }
                 
-                const companiesSnapshot = await db.collection('companies').where('id', '==', companyId).get();
+                const companiesSnapshot = companyId === "driftpro" ? await db.collection("companies").get() : await db.collection("companies").where("id", "==", companyId).get();
                 const companies = [];
                 companiesSnapshot.forEach(doc => {
                     companies.push({ id: doc.id, ...doc.data() });

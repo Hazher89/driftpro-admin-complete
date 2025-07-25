@@ -39,7 +39,7 @@
                 const userData = userDoc.data();
                 
                 if (userData?.role !== 'driftpro-admin') {
-                    alert('Du har ikke tilgang til DriftPro Admin panel');
+                    alert('Du har ikke tilgang til DriftPro Admin panel - kun DriftPro bedriftens admin-brukere kan aksessere dette');
                     window.location.href = '/';
                     return;
                 }
