@@ -266,14 +266,42 @@
             <div id="departmentsSection" class="hidden">
                 <div class="bg-gray-800 p-6 rounded-lg">
                     <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-2xl font-bold">🏢 Avdelinger</h2>
+                        <h2 class="text-2xl font-bold">🏢 Avdelingsadministrasjon</h2>
                         <button onclick="showAddDepartmentModal()" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg">
-                            + Legg til avdeling
+                            + Ny avdeling
                         </button>
                     </div>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="departmentsGrid">
-                        <!-- Departments will be loaded here -->
+                    <!-- Search and Filter -->
+                    <div class="flex gap-4 mb-6">
+                        <input type="text" id="departmentSearch" placeholder="Søk etter avdeling..." class="flex-1 p-3 bg-gray-700 border border-gray-600 rounded-lg">
+                        <select id="managerFilter" class="p-3 bg-gray-700 border border-gray-600 rounded-lg">
+                            <option value="">Alle ledere</option>
+                        </select>
+                        <select id="statusFilter" class="p-3 bg-gray-700 border border-gray-600 rounded-lg">
+                            <option value="">Alle statuser</option>
+                            <option value="active">Aktiv</option>
+                            <option value="inactive">Inaktiv</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Departments Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-gray-700">
+                                    <th class="text-left p-3">Avdelingsnavn</th>
+                                    <th class="text-left p-3">Leder</th>
+                                    <th class="text-left p-3">Antall medlemmer</th>
+                                    <th class="text-left p-3">Status</th>
+                                    <th class="text-left p-3">Opprettet</th>
+                                    <th class="text-left p-3">Handlinger</th>
+                                </tr>
+                            </thead>
+                            <tbody id="departmentsTableBody">
+                                <!-- Departments will be loaded here -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -807,22 +835,49 @@
         }
 
         function displayDepartments() {
-            const grid = document.getElementById('departmentsGrid');
-            grid.innerHTML = '';
+            const tbody = document.getElementById('departmentsTableBody');
+            tbody.innerHTML = '';
             
             departments.forEach(dept => {
-                const div = document.createElement('div');
-                div.className = 'bg-gray-700 p-4 rounded-lg';
-                div.innerHTML = `
-                    <h3 class="font-semibold mb-2">${dept.name}</h3>
-                    <p class="text-gray-400 text-sm mb-2">Manager: ${dept.manager || 'Ikke tildelt'}</p>
-                    <p class="text-gray-400 text-sm mb-4">${users.filter(u => u.department === dept.name).length} brukere</p>
-                    <div class="flex gap-2">
-                        <button onclick="editDepartment('${dept.id}')" class="bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded text-sm">Rediger</button>
-                        <button onclick="deleteDepartment('${dept.id}')" class="bg-red-600 hover:bg-red-700 px-2 py-1 rounded text-sm">Slett</button>
-                    </div>
+                const memberCount = users.filter(u => u.department === dept.name).length;
+                const createdDate = dept.createdAt ? new Date(dept.createdAt.toDate()).toLocaleDateString('no-NO') : 'Ukjent';
+                const status = dept.status || 'active';
+                
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-700 hover:bg-gray-700';
+                row.innerHTML = `
+                    <td class="p-3">
+                        <div class="font-medium">${dept.name}</div>
+                        <div class="text-sm text-gray-400">${dept.description || 'Ingen beskrivelse'}</div>
+                    </td>
+                    <td class="p-3">
+                        <div class="font-medium">${dept.manager || 'Ikke tildelt'}</div>
+                        <div class="text-sm text-gray-400">${dept.managerEmail || ''}</div>
+                    </td>
+                    <td class="p-3">
+                        <span class="bg-blue-600 px-2 py-1 rounded text-sm">${memberCount} medlemmer</span>
+                    </td>
+                    <td class="p-3">
+                        <span class="${status === 'active' ? 'bg-green-600' : 'bg-red-600'} px-2 py-1 rounded text-sm">
+                            ${status === 'active' ? 'Aktiv' : 'Inaktiv'}
+                        </span>
+                    </td>
+                    <td class="p-3 text-sm text-gray-400">${createdDate}</td>
+                    <td class="p-3">
+                        <div class="flex gap-2">
+                            <button onclick="editDepartment('${dept.id}')" class="bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded text-sm">
+                                ✏️ Rediger
+                            </button>
+                            <button onclick="viewDepartmentMembers('${dept.id}')" class="bg-green-600 hover:bg-green-700 px-2 py-1 rounded text-sm">
+                                👥 Medlemmer
+                            </button>
+                            <button onclick="deleteDepartment('${dept.id}')" class="bg-red-600 hover:bg-red-700 px-2 py-1 rounded text-sm">
+                                🗑️ Slett
+                            </button>
+                        </div>
+                    </td>
                 `;
-                grid.appendChild(div);
+                tbody.appendChild(row);
             });
         }
 
