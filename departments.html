@@ -121,7 +121,71 @@
     </div>
 
     <!-- Add Department Modal -->
-    <div id="addDepartmentModal" class="fixed inset-0 bg-black bg-opacity-50 modal-backdrop flex items-center justify-center z-50 hidden">
+    <!-- Edit Department Modal -->
+    <div id="editDepartmentModal" class="fixed inset-0 bg-black bg-opacity-50 modal-backdrop flex items-center justify-center z-50 hidden">
+        <div class="bg-gray-800 p-6 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold">Rediger avdeling</h2>
+                <button onclick="hideEditDepartmentModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            
+            <form id="editDepartmentForm" class="space-y-6">
+                <input type="hidden" id="editDepartmentId">
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Avdelingsnavn *</label>
+                        <input type="text" id="editDepartmentName" required class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Avdelingskode</label>
+                        <input type="text" id="editDepartmentCode" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2">Beskrivelse</label>
+                    <textarea id="editDepartmentDescription" rows="3" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none"></textarea>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Avdelingsleder</label>
+                        <select id="editDepartmentLeader" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none">
+                            <option value="">Velg leder</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Status</label>
+                        <select id="editDepartmentStatus" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none">
+                            <option value="active">Aktiv</option>
+                            <option value="inactive">Inaktiv</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Maks antall ansatte</label>
+                        <input type="number" id="editMaxEmployees" min="1" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Budsjett (kr)</label>
+                        <input type="number" id="editDepartmentBudget" min="0" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none">
+                    </div>
+                </div>
+                
+                <div class="flex gap-3 pt-4">
+                    <button type="submit" class="flex-1 bg-yellow-600 hover:bg-yellow-700 py-3 rounded-lg font-semibold transition-colors">
+                        Lagre endringer
+                    </button>
+                    <button type="button" onclick="hideEditDepartmentModal()" class="flex-1 bg-gray-600 hover:bg-gray-700 py-3 rounded-lg font-semibold transition-colors">
+                        Avbryt
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>    <div id="addDepartmentModal" class="fixed inset-0 bg-black bg-opacity-50 modal-backdrop flex items-center justify-center z-50 hidden">
         <div class="bg-gray-800 p-6 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-2xl font-bold">Legg til ny avdeling</h2>
@@ -461,24 +525,21 @@
         }
 
         function editDepartment(deptId) {
-        function saveDepartmentEdit(event) {
-            event.preventDefault();
-            
-            const deptId = document.getElementById("editDepartmentId").value;
             const department = departments.find(d => d.id === deptId);
-            
             if (department) {
-                department.name = document.getElementById("editDepartmentName").value;
-                department.code = document.getElementById("editDepartmentCode").value;
-                department.description = document.getElementById("editDepartmentDescription").value;
-                department.leaderId = document.getElementById("editDepartmentLeader").value || null;
-                department.status = document.getElementById("editDepartmentStatus").value;
-                department.maxEmployees = parseInt(document.getElementById("editMaxEmployees").value) || null;
-                department.budget = parseInt(document.getElementById("editDepartmentBudget").value) || null;
+                document.getElementById("editDepartmentId").value = department.id;
+                document.getElementById("editDepartmentName").value = department.name;
+                document.getElementById("editDepartmentCode").value = department.code || "";
+                document.getElementById("editDepartmentDescription").value = department.description || "";
+                document.getElementById("editDepartmentLeader").value = department.leaderId || "";
+                document.getElementById("editDepartmentStatus").value = department.status;
+                document.getElementById("editMaxEmployees").value = department.maxEmployees || "";
+                document.getElementById("editDepartmentBudget").value = department.budget || "";
                 
-                hideEditDepartmentModal();
-                updateStatistics();
-                displayDepartments();
+                document.getElementById("editDepartmentModal").classList.remove("hidden");
+                populateLeaderFilters();
+            }
+        }                displayDepartments();
                 
                 alert("Avdeling oppdatert!");
             }
