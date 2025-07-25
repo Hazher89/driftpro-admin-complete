@@ -156,6 +156,7 @@
                 const userDoc = await db.collection('users').doc(currentUser.uid).get();
                 const userData = userDoc.data();
                 const userRole = userData?.role;
+                const companyId = userData?.companyId;
                 
                 // Show DriftPro Admin card only for users in DriftPro company (companyId: "driftpro")
                 const driftproAdminCard = document.getElementById("driftproAdminCard");
@@ -163,15 +164,16 @@
                     if (companyId === "driftpro") {
                         driftproAdminCard.style.display = "block";
                     } else {
+                        driftproAdminCard.style.display = "none";
+                    }
                 }                
                 
                 if (!companyId) {
-                    console.error('No company ID found for user - GDPR compliance issue');
+                    console.error("No company ID found for user - GDPR compliance issue");
                     return;
                 }
                 
-                const companiesSnapshot = companyId === "driftpro" ? await db.collection("companies").get() : await db.collection("companies").where("id", "==", companyId).get();
-                const companies = [];
+                const companiesSnapshot = companyId === "driftpro" ? await db.collection("companies").get() : await db.collection("companies").where("id", "==", companyId).get();                const companies = [];
                 companiesSnapshot.forEach(doc => {
                     companies.push({ id: doc.id, ...doc.data() });
                 });
