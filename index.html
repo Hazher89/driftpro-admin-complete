@@ -33,7 +33,68 @@
                 
                 // Test Firestore connection first
                 const isConnected = await testFirestore();
-                if (!isConnected) {
+        
+        // Function to create test companies if none exist
+        async function createTestCompanies() {
+            try {
+                console.log('Checking if test companies need to be created...');
+                const snapshot = await db.collection('companies').get();
+                
+                if (snapshot.empty) {
+                    console.log('No companies found, creating test companies...');
+                    
+                    const testCompanies = [
+                        { name: 'DriftPro', code: 'driftpro-40ccd', description: 'Hovedbedrift' },
+                        { name: 'Test Bedrift', code: 'test-company', description: 'Test bedrift' },
+                        { name: 'ACME Corporation', code: 'acme-corp', description: 'Teknologi bedrift' },
+                        { name: 'Tech Solutions AS', code: 'tech-solutions', description: 'IT konsulent' },
+                        { name: 'Nordic Engineering', code: 'nordic-engineering', description: 'Ingeniørfirma' }
+                    ];
+                    
+                    for (const company of testCompanies) {
+                        await db.collection('companies').add({
+                            ...company,
+                            createdAt: new Date(),
+                            isActive: true
+                        });
+                    }
+                    
+                    console.log('Created', testCompanies.length, 'test companies');
+                } else {
+                    console.log('Found', snapshot.size, 'existing companies');
+                }
+            } catch (error) {
+                console.error('Error creating test companies:', error);
+            }
+        }
+        
+        // Create test companies on page load
+        createTestCompanies();
+        
+        // Function to list all collections for debugging
+        async function listAllCollections() {
+            try {
+                console.log('Listing all Firestore collections...');
+                const collections = await db.listCollections();
+                console.log('Available collections:', collections.map(col => col.id));
+                
+                // Also check if companies collection exists
+                const companiesSnapshot = await db.collection('companies').get();
+                console.log('Companies collection has', companiesSnapshot.size, 'documents');
+                
+                if (companiesSnapshot.size > 0) {
+                    companiesSnapshot.forEach(doc => {
+                        console.log('Company:', doc.id, doc.data());
+                    });
+                }
+            } catch (error) {
+                console.error('Error listing collections:', error);
+            }
+        }
+        
+        // List collections on page load
+        setTimeout(listAllCollections, 2000);
+                                if (!isConnected) {
                     throw new Error('Firestore connection failed');
                 }
                 
@@ -49,7 +110,68 @@
         
         // Test Firestore on page load
         testFirestore();
-            </script>    <script>
+        
+        // Function to create test companies if none exist
+        async function createTestCompanies() {
+            try {
+                console.log('Checking if test companies need to be created...');
+                const snapshot = await db.collection('companies').get();
+                
+                if (snapshot.empty) {
+                    console.log('No companies found, creating test companies...');
+                    
+                    const testCompanies = [
+                        { name: 'DriftPro', code: 'driftpro-40ccd', description: 'Hovedbedrift' },
+                        { name: 'Test Bedrift', code: 'test-company', description: 'Test bedrift' },
+                        { name: 'ACME Corporation', code: 'acme-corp', description: 'Teknologi bedrift' },
+                        { name: 'Tech Solutions AS', code: 'tech-solutions', description: 'IT konsulent' },
+                        { name: 'Nordic Engineering', code: 'nordic-engineering', description: 'Ingeniørfirma' }
+                    ];
+                    
+                    for (const company of testCompanies) {
+                        await db.collection('companies').add({
+                            ...company,
+                            createdAt: new Date(),
+                            isActive: true
+                        });
+                    }
+                    
+                    console.log('Created', testCompanies.length, 'test companies');
+                } else {
+                    console.log('Found', snapshot.size, 'existing companies');
+                }
+            } catch (error) {
+                console.error('Error creating test companies:', error);
+            }
+        }
+        
+        // Create test companies on page load
+        createTestCompanies();
+        
+        // Function to list all collections for debugging
+        async function listAllCollections() {
+            try {
+                console.log('Listing all Firestore collections...');
+                const collections = await db.listCollections();
+                console.log('Available collections:', collections.map(col => col.id));
+                
+                // Also check if companies collection exists
+                const companiesSnapshot = await db.collection('companies').get();
+                console.log('Companies collection has', companiesSnapshot.size, 'documents');
+                
+                if (companiesSnapshot.size > 0) {
+                    companiesSnapshot.forEach(doc => {
+                        console.log('Company:', doc.id, doc.data());
+                    });
+                }
+            } catch (error) {
+                console.error('Error listing collections:', error);
+            }
+        }
+        
+        // List collections on page load
+        setTimeout(listAllCollections, 2000);
+                            </script>    <script>
         // Hide loading screen immediately when fallback shows
         if (document.getElementById('loadingScreen')) {
             document.getElementById('loadingScreen').style.display = 'none';
@@ -82,7 +204,68 @@
                 
                 // Test Firestore connection first
                 const isConnected = await testFirestore();
-                if (!isConnected) {
+        
+        // Function to create test companies if none exist
+        async function createTestCompanies() {
+            try {
+                console.log('Checking if test companies need to be created...');
+                const snapshot = await db.collection('companies').get();
+                
+                if (snapshot.empty) {
+                    console.log('No companies found, creating test companies...');
+                    
+                    const testCompanies = [
+                        { name: 'DriftPro', code: 'driftpro-40ccd', description: 'Hovedbedrift' },
+                        { name: 'Test Bedrift', code: 'test-company', description: 'Test bedrift' },
+                        { name: 'ACME Corporation', code: 'acme-corp', description: 'Teknologi bedrift' },
+                        { name: 'Tech Solutions AS', code: 'tech-solutions', description: 'IT konsulent' },
+                        { name: 'Nordic Engineering', code: 'nordic-engineering', description: 'Ingeniørfirma' }
+                    ];
+                    
+                    for (const company of testCompanies) {
+                        await db.collection('companies').add({
+                            ...company,
+                            createdAt: new Date(),
+                            isActive: true
+                        });
+                    }
+                    
+                    console.log('Created', testCompanies.length, 'test companies');
+                } else {
+                    console.log('Found', snapshot.size, 'existing companies');
+                }
+            } catch (error) {
+                console.error('Error creating test companies:', error);
+            }
+        }
+        
+        // Create test companies on page load
+        createTestCompanies();
+        
+        // Function to list all collections for debugging
+        async function listAllCollections() {
+            try {
+                console.log('Listing all Firestore collections...');
+                const collections = await db.listCollections();
+                console.log('Available collections:', collections.map(col => col.id));
+                
+                // Also check if companies collection exists
+                const companiesSnapshot = await db.collection('companies').get();
+                console.log('Companies collection has', companiesSnapshot.size, 'documents');
+                
+                if (companiesSnapshot.size > 0) {
+                    companiesSnapshot.forEach(doc => {
+                        console.log('Company:', doc.id, doc.data());
+                    });
+                }
+            } catch (error) {
+                console.error('Error listing collections:', error);
+            }
+        }
+        
+        // List collections on page load
+        setTimeout(listAllCollections, 2000);
+                                if (!isConnected) {
                     throw new Error('Firestore connection failed');
                 }
                 
@@ -110,7 +293,68 @@
                 
                 // Test Firestore connection first
                 const isConnected = await testFirestore();
-                if (!isConnected) {
+        
+        // Function to create test companies if none exist
+        async function createTestCompanies() {
+            try {
+                console.log('Checking if test companies need to be created...');
+                const snapshot = await db.collection('companies').get();
+                
+                if (snapshot.empty) {
+                    console.log('No companies found, creating test companies...');
+                    
+                    const testCompanies = [
+                        { name: 'DriftPro', code: 'driftpro-40ccd', description: 'Hovedbedrift' },
+                        { name: 'Test Bedrift', code: 'test-company', description: 'Test bedrift' },
+                        { name: 'ACME Corporation', code: 'acme-corp', description: 'Teknologi bedrift' },
+                        { name: 'Tech Solutions AS', code: 'tech-solutions', description: 'IT konsulent' },
+                        { name: 'Nordic Engineering', code: 'nordic-engineering', description: 'Ingeniørfirma' }
+                    ];
+                    
+                    for (const company of testCompanies) {
+                        await db.collection('companies').add({
+                            ...company,
+                            createdAt: new Date(),
+                            isActive: true
+                        });
+                    }
+                    
+                    console.log('Created', testCompanies.length, 'test companies');
+                } else {
+                    console.log('Found', snapshot.size, 'existing companies');
+                }
+            } catch (error) {
+                console.error('Error creating test companies:', error);
+            }
+        }
+        
+        // Create test companies on page load
+        createTestCompanies();
+        
+        // Function to list all collections for debugging
+        async function listAllCollections() {
+            try {
+                console.log('Listing all Firestore collections...');
+                const collections = await db.listCollections();
+                console.log('Available collections:', collections.map(col => col.id));
+                
+                // Also check if companies collection exists
+                const companiesSnapshot = await db.collection('companies').get();
+                console.log('Companies collection has', companiesSnapshot.size, 'documents');
+                
+                if (companiesSnapshot.size > 0) {
+                    companiesSnapshot.forEach(doc => {
+                        console.log('Company:', doc.id, doc.data());
+                    });
+                }
+            } catch (error) {
+                console.error('Error listing collections:', error);
+            }
+        }
+        
+        // List collections on page load
+        setTimeout(listAllCollections, 2000);
+                                if (!isConnected) {
                     throw new Error('Firestore connection failed');
                 }
                 
@@ -162,7 +406,68 @@
                 
                 // Test Firestore connection first
                 const isConnected = await testFirestore();
-                if (!isConnected) {
+        
+        // Function to create test companies if none exist
+        async function createTestCompanies() {
+            try {
+                console.log('Checking if test companies need to be created...');
+                const snapshot = await db.collection('companies').get();
+                
+                if (snapshot.empty) {
+                    console.log('No companies found, creating test companies...');
+                    
+                    const testCompanies = [
+                        { name: 'DriftPro', code: 'driftpro-40ccd', description: 'Hovedbedrift' },
+                        { name: 'Test Bedrift', code: 'test-company', description: 'Test bedrift' },
+                        { name: 'ACME Corporation', code: 'acme-corp', description: 'Teknologi bedrift' },
+                        { name: 'Tech Solutions AS', code: 'tech-solutions', description: 'IT konsulent' },
+                        { name: 'Nordic Engineering', code: 'nordic-engineering', description: 'Ingeniørfirma' }
+                    ];
+                    
+                    for (const company of testCompanies) {
+                        await db.collection('companies').add({
+                            ...company,
+                            createdAt: new Date(),
+                            isActive: true
+                        });
+                    }
+                    
+                    console.log('Created', testCompanies.length, 'test companies');
+                } else {
+                    console.log('Found', snapshot.size, 'existing companies');
+                }
+            } catch (error) {
+                console.error('Error creating test companies:', error);
+            }
+        }
+        
+        // Create test companies on page load
+        createTestCompanies();
+        
+        // Function to list all collections for debugging
+        async function listAllCollections() {
+            try {
+                console.log('Listing all Firestore collections...');
+                const collections = await db.listCollections();
+                console.log('Available collections:', collections.map(col => col.id));
+                
+                // Also check if companies collection exists
+                const companiesSnapshot = await db.collection('companies').get();
+                console.log('Companies collection has', companiesSnapshot.size, 'documents');
+                
+                if (companiesSnapshot.size > 0) {
+                    companiesSnapshot.forEach(doc => {
+                        console.log('Company:', doc.id, doc.data());
+                    });
+                }
+            } catch (error) {
+                console.error('Error listing collections:', error);
+            }
+        }
+        
+        // List collections on page load
+        setTimeout(listAllCollections, 2000);
+                                if (!isConnected) {
                     throw new Error('Firestore connection failed');
                 }
                 
@@ -651,7 +956,68 @@
                 
                 // Test Firestore connection first
                 const isConnected = await testFirestore();
-                if (!isConnected) {
+        
+        // Function to create test companies if none exist
+        async function createTestCompanies() {
+            try {
+                console.log('Checking if test companies need to be created...');
+                const snapshot = await db.collection('companies').get();
+                
+                if (snapshot.empty) {
+                    console.log('No companies found, creating test companies...');
+                    
+                    const testCompanies = [
+                        { name: 'DriftPro', code: 'driftpro-40ccd', description: 'Hovedbedrift' },
+                        { name: 'Test Bedrift', code: 'test-company', description: 'Test bedrift' },
+                        { name: 'ACME Corporation', code: 'acme-corp', description: 'Teknologi bedrift' },
+                        { name: 'Tech Solutions AS', code: 'tech-solutions', description: 'IT konsulent' },
+                        { name: 'Nordic Engineering', code: 'nordic-engineering', description: 'Ingeniørfirma' }
+                    ];
+                    
+                    for (const company of testCompanies) {
+                        await db.collection('companies').add({
+                            ...company,
+                            createdAt: new Date(),
+                            isActive: true
+                        });
+                    }
+                    
+                    console.log('Created', testCompanies.length, 'test companies');
+                } else {
+                    console.log('Found', snapshot.size, 'existing companies');
+                }
+            } catch (error) {
+                console.error('Error creating test companies:', error);
+            }
+        }
+        
+        // Create test companies on page load
+        createTestCompanies();
+        
+        // Function to list all collections for debugging
+        async function listAllCollections() {
+            try {
+                console.log('Listing all Firestore collections...');
+                const collections = await db.listCollections();
+                console.log('Available collections:', collections.map(col => col.id));
+                
+                // Also check if companies collection exists
+                const companiesSnapshot = await db.collection('companies').get();
+                console.log('Companies collection has', companiesSnapshot.size, 'documents');
+                
+                if (companiesSnapshot.size > 0) {
+                    companiesSnapshot.forEach(doc => {
+                        console.log('Company:', doc.id, doc.data());
+                    });
+                }
+            } catch (error) {
+                console.error('Error listing collections:', error);
+            }
+        }
+        
+        // List collections on page load
+        setTimeout(listAllCollections, 2000);
+                                if (!isConnected) {
                     throw new Error('Firestore connection failed');
                 }
                 
@@ -679,7 +1045,68 @@
                 
                 // Test Firestore connection first
                 const isConnected = await testFirestore();
-                if (!isConnected) {
+        
+        // Function to create test companies if none exist
+        async function createTestCompanies() {
+            try {
+                console.log('Checking if test companies need to be created...');
+                const snapshot = await db.collection('companies').get();
+                
+                if (snapshot.empty) {
+                    console.log('No companies found, creating test companies...');
+                    
+                    const testCompanies = [
+                        { name: 'DriftPro', code: 'driftpro-40ccd', description: 'Hovedbedrift' },
+                        { name: 'Test Bedrift', code: 'test-company', description: 'Test bedrift' },
+                        { name: 'ACME Corporation', code: 'acme-corp', description: 'Teknologi bedrift' },
+                        { name: 'Tech Solutions AS', code: 'tech-solutions', description: 'IT konsulent' },
+                        { name: 'Nordic Engineering', code: 'nordic-engineering', description: 'Ingeniørfirma' }
+                    ];
+                    
+                    for (const company of testCompanies) {
+                        await db.collection('companies').add({
+                            ...company,
+                            createdAt: new Date(),
+                            isActive: true
+                        });
+                    }
+                    
+                    console.log('Created', testCompanies.length, 'test companies');
+                } else {
+                    console.log('Found', snapshot.size, 'existing companies');
+                }
+            } catch (error) {
+                console.error('Error creating test companies:', error);
+            }
+        }
+        
+        // Create test companies on page load
+        createTestCompanies();
+        
+        // Function to list all collections for debugging
+        async function listAllCollections() {
+            try {
+                console.log('Listing all Firestore collections...');
+                const collections = await db.listCollections();
+                console.log('Available collections:', collections.map(col => col.id));
+                
+                // Also check if companies collection exists
+                const companiesSnapshot = await db.collection('companies').get();
+                console.log('Companies collection has', companiesSnapshot.size, 'documents');
+                
+                if (companiesSnapshot.size > 0) {
+                    companiesSnapshot.forEach(doc => {
+                        console.log('Company:', doc.id, doc.data());
+                    });
+                }
+            } catch (error) {
+                console.error('Error listing collections:', error);
+            }
+        }
+        
+        // List collections on page load
+        setTimeout(listAllCollections, 2000);
+                                if (!isConnected) {
                     throw new Error('Firestore connection failed');
                 }
                 
@@ -731,7 +1158,68 @@
                 
                 // Test Firestore connection first
                 const isConnected = await testFirestore();
-                if (!isConnected) {
+        
+        // Function to create test companies if none exist
+        async function createTestCompanies() {
+            try {
+                console.log('Checking if test companies need to be created...');
+                const snapshot = await db.collection('companies').get();
+                
+                if (snapshot.empty) {
+                    console.log('No companies found, creating test companies...');
+                    
+                    const testCompanies = [
+                        { name: 'DriftPro', code: 'driftpro-40ccd', description: 'Hovedbedrift' },
+                        { name: 'Test Bedrift', code: 'test-company', description: 'Test bedrift' },
+                        { name: 'ACME Corporation', code: 'acme-corp', description: 'Teknologi bedrift' },
+                        { name: 'Tech Solutions AS', code: 'tech-solutions', description: 'IT konsulent' },
+                        { name: 'Nordic Engineering', code: 'nordic-engineering', description: 'Ingeniørfirma' }
+                    ];
+                    
+                    for (const company of testCompanies) {
+                        await db.collection('companies').add({
+                            ...company,
+                            createdAt: new Date(),
+                            isActive: true
+                        });
+                    }
+                    
+                    console.log('Created', testCompanies.length, 'test companies');
+                } else {
+                    console.log('Found', snapshot.size, 'existing companies');
+                }
+            } catch (error) {
+                console.error('Error creating test companies:', error);
+            }
+        }
+        
+        // Create test companies on page load
+        createTestCompanies();
+        
+        // Function to list all collections for debugging
+        async function listAllCollections() {
+            try {
+                console.log('Listing all Firestore collections...');
+                const collections = await db.listCollections();
+                console.log('Available collections:', collections.map(col => col.id));
+                
+                // Also check if companies collection exists
+                const companiesSnapshot = await db.collection('companies').get();
+                console.log('Companies collection has', companiesSnapshot.size, 'documents');
+                
+                if (companiesSnapshot.size > 0) {
+                    companiesSnapshot.forEach(doc => {
+                        console.log('Company:', doc.id, doc.data());
+                    });
+                }
+            } catch (error) {
+                console.error('Error listing collections:', error);
+            }
+        }
+        
+        // List collections on page load
+        setTimeout(listAllCollections, 2000);
+                                if (!isConnected) {
                     throw new Error('Firestore connection failed');
                 }
                 
