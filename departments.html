@@ -309,75 +309,6 @@
                 alert("Feil ved lasting av data fra Firestore");
             }
         }
-        let departments = [
-            {
-                id: '1',
-                name: 'IT-avdelingen',
-                code: 'IT',
-                description: 'Informasjonsteknologi og systemutvikling',
-                leaderId: '1',
-                status: 'active',
-                maxEmployees: 15,
-                budget: 2500000,
-                createdAt: new Date('2024-01-15'),
-                employees: ['1', '2', '3']
-            },
-            {
-                id: '2',
-                name: 'HR-avdelingen',
-                code: 'HR',
-                description: 'Human Resources og personaladministrasjon',
-                leaderId: '2',
-                status: 'active',
-                maxEmployees: 8,
-                budget: 1200000,
-                createdAt: new Date('2024-01-20'),
-                employees: ['4', '5']
-            },
-            {
-                id: '3',
-                name: 'Salg og markedsføring',
-                code: 'SALG',
-                description: 'Salg, markedsføring og kundeservice',
-                leaderId: '3',
-                status: 'active',
-                maxEmployees: 20,
-                budget: 3500000,
-                createdAt: new Date('2024-02-01'),
-                employees: ['6', '7', '8', '9']
-            }
-        ];
-
-        let employees = [
-            { id: '1', firstName: 'Ola', lastName: 'Nordmann', email: 'ola@driftpro.no', position: 'Senior Utvikler', departmentId: '1', salary: 750000, startDate: '2023-03-15' },
-            { id: '2', firstName: 'Kari', lastName: 'Hansen', email: 'kari@driftpro.no', position: 'Frontend Utvikler', departmentId: '1', salary: 650000, startDate: '2023-06-01' },
-            { id: '3', firstName: 'Per', lastName: 'Olsen', email: 'per@driftpro.no', position: 'Backend Utvikler', departmentId: '1', salary: 700000, startDate: '2023-04-10' },
-            { id: '4', firstName: 'Anne', lastName: 'Berg', email: 'anne@driftpro.no', position: 'HR Manager', departmentId: '2', salary: 800000, startDate: '2023-01-15' },
-            { id: '5', firstName: 'Erik', lastName: 'Sørensen', email: 'erik@driftpro.no', position: 'HR Konsulent', departmentId: '2', salary: 550000, startDate: '2023-08-01' },
-            { id: '6', firstName: 'Maria', lastName: 'Johansen', email: 'maria@driftpro.no', position: 'Salgssjef', departmentId: '3', salary: 850000, startDate: '2023-02-01' },
-            { id: '7', firstName: 'Lars', lastName: 'Pedersen', email: 'lars@driftpro.no', position: 'Markedssjef', departmentId: '3', salary: 780000, startDate: '2023-05-15' },
-            { id: '8', firstName: 'Sofia', lastName: 'Andersen', email: 'sofia@driftpro.no', position: 'Kundeservice', departmentId: '3', salary: 450000, startDate: '2023-09-01' },
-            { id: '9', firstName: 'Thomas', lastName: 'Nilsen', email: 'thomas@driftpro.no', position: 'Salgsrepresentant', departmentId: '3', salary: 500000, startDate: '2023-07-01' },
-            { id: '10', firstName: 'Ingrid', lastName: 'Svendsen', email: 'ingrid@driftpro.no', position: 'Designer', departmentId: null, salary: 600000, startDate: '2023-10-01' },
-            { id: '11', firstName: 'Bjørn', lastName: 'Eriksen', email: 'bjorn@driftpro.no', position: 'Analytiker', departmentId: null, salary: 650000, startDate: '2023-11-01' }
-        ];
-
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
-            updateStatistics();
-            displayDepartments();
-            populateLeaderFilters();
-            setupEventListeners();
-        });
-
-        function setupEventListeners() {
-            // Search functionality
-            document.getElementById('departmentSearch').addEventListener('input', filterDepartments);
-            document.getElementById('statusFilter').addEventListener('change', filterDepartments);
-            document.getElementById('leaderFilter').addEventListener('change', filterDepartments);
-            
-            // Form submissions
-            document.getElementById('addDepartmentForm').addEventListener('submit', addDepartment);
         }
 
         function updateStatistics() {
@@ -531,7 +462,7 @@
         }
 
         // Modal functions
-        function showAddDepartmentModal() { alert("Opening modal"); console.log("Opening modal");
+        function showAddDepartmentModal() {
             document.getElementById('addDepartmentModal').classList.remove('hidden');
             populateLeaderFilters();
         }
@@ -546,7 +477,7 @@
             event.preventDefault();
             
             const newDepartment = {
-                id: Date.now().toString(),
+
                 name: document.getElementById('departmentName').value,
                 code: document.getElementById('departmentCode').value,
                 description: document.getElementById('departmentDescription').value,
