@@ -249,7 +249,7 @@
     </div>
 
     <script>
-        // Mock data
+        function testFunction() { alert("JavaScript is working!"); }        // Mock data
         let departments = [
             {
                 id: '1',
@@ -472,7 +472,7 @@
         }
 
         // Modal functions
-        function showAddDepartmentModal() { console.log("Opening modal");
+        function showAddDepartmentModal() { alert("Opening modal"); console.log("Opening modal");
             document.getElementById('addDepartmentModal').classList.remove('hidden');
             populateLeaderFilters();
         }
