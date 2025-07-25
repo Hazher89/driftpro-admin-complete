@@ -15,7 +15,9 @@
         <div class="text-center">
             <div class="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500 mx-auto"></div>
             <p class="mt-4 text-gray-400">Laster DriftPro Admin Panel...</p>
-    </div>
+            <button onclick="showLogin()" class="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg">
+                Gå til login
+            </button>    </div>
 
     <!-- Company Search Screen -->
     <div id="companySearchScreen" class="min-h-screen flex items-center justify-center hidden">
@@ -505,22 +507,15 @@
         document.addEventListener('DOMContentLoaded', function() {
             console.log('DOM loaded, initializing app...');
             
-            // Add timeout to prevent infinite loading
+            // Immediately show company search to avoid loading issues
+            showCompanySearch();
+            
+            // Also add timeout as backup
             setTimeout(() => {
                 console.log('Timeout reached, showing company search...');
                 showCompanySearch();
-            }, 1000);
-            
-            // Try to initialize Firebase and show company search
-            try {
-                console.log('Firebase config:', firebaseConfig);
-                showCompanySearch();
-            } catch (error) {
-                console.error('Error initializing app:', error);
-                showCompanySearch();
-            }
-        });
-        
+            }, 2000);
+        });        
         function setupCompanySearch() {
             console.log('Setting up company search...');
             // For now, just show a simple company selection
@@ -538,7 +533,7 @@
             selectedCompany = companyId;
             showLogin();
         }
-                function showCompanySearch() {
+        function showCompanySearch() {
             console.log('Showing company search screen...');
             try {
                 document.getElementById('loadingScreen').classList.add('hidden');
@@ -550,12 +545,11 @@
                 setupCompanySearch();
             } catch (error) {
                 console.error('Error in showCompanySearch:', error);
-                // Fallback: show login screen
+                // Fallback: show login screen directly
                 document.getElementById('loadingScreen').classList.add('hidden');
                 document.getElementById('loginScreen').classList.remove('hidden');
             }
-        }        function showLogin() {
-        
+        }        
         function setupCompanySearch() {
             console.log('Setting up company search...');
             // For now, just show a simple company selection
