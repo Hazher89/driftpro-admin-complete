@@ -49,7 +49,7 @@
                 
             } catch (error) {
                 console.error('Error loading deviations:', error);
-                document.getElementById('deviationsContainer').innerHTML = '<p class="text-red-500">Feil ved lasting av avvik: ' + error.message + '</p>';
+                document.getElementById('deviationsContainer').innerHTML = '<p class="text-red-400">Feil ved lasting av avvik: ' + error.message + '</p>';
             }
         }
 
@@ -59,64 +59,74 @@
             
             if (deviations.length === 0) {
                 container.innerHTML = `
-                    <div class="text-center py-12">
-                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
-                        </svg>
-                        <h3 class="mt-2 text-sm font-medium text-gray-900">Ingen avvik funnet</h3>
-                        <p class="mt-1 text-sm text-gray-500">Det er ingen avvik registrert i systemet ennå.</p>
+                    <div class="text-center py-16">
+                        <div class="w-24 h-24 bg-gradient-to-br from-red-500/20 to-red-600/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <svg class="w-12 h-12 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-2xl font-bold text-white mb-2">Ingen avvik funnet</h3>
+                        <p class="text-gray-400">Det er ingen avvik registrert i systemet ennå.</p>
                     </div>
                 `;
                 return;
             }
 
             container.innerHTML = `
-                <div class="bg-white shadow overflow-hidden sm:rounded-md">
-                    <ul class="divide-y divide-gray-200">
-                        ${deviations.map(deviation => `
-                            <li class="px-6 py-4 hover:bg-gray-50">
-                                <div class="flex items-center justify-between">
-                                    <div class="flex items-center">
-                                        <div class="flex-shrink-0">
-                                            <div class="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
-                                                <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
-                                                </svg>
-                                            </div>
-                                        </div>
-                                        <div class="ml-4">
-                                            <div class="text-sm font-medium text-gray-900">
-                                                ${deviation.title || 'Ukjent avvik'}
-                                            </div>
-                                            <div class="text-sm text-gray-500">
-                                                ${deviation.description || 'Ingen beskrivelse'}
-                                            </div>
-                                            <div class="text-sm text-gray-500">
-                                                Rapportert av: ${deviation.reportedBy || 'Ukjent'}
-                                            </div>
-                                        </div>
+                <div class="space-y-6">
+                    ${deviations.map(deviation => `
+                        <div class="glass-effect rounded-2xl p-6 hover:bg-white/20 transition-all duration-300 transform hover:scale-105 shadow-xl">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <div class="w-16 h-16 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center shadow-lg">
+                                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                                        </svg>
                                     </div>
-                                    <div class="flex items-center space-x-4">
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                            ${deviation.priority || 'Normal'}
-                                        </span>
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                            ${deviation.status || 'Åpen'}
-                                        </span>
-                                        <button onclick="editDeviation('${deviation.id}')" class="text-indigo-600 hover:text-indigo-900 text-sm font-medium">
-                                            Rediger
-                                        </button>
+                                    <div class="ml-6">
+                                        <h3 class="text-xl font-bold text-white mb-1">
+                                            ${deviation.title || 'Ukjent avvik'}
+                                        </h3>
+                                        <p class="text-gray-300 mb-1">
+                                            ${deviation.description || 'Ingen beskrivelse'}
+                                        </p>
+                                        <p class="text-gray-400 text-sm">
+                                            Rapportert av: ${deviation.reportedBy || 'Ukjent'}
+                                        </p>
                                     </div>
                                 </div>
-                                <div class="mt-2 text-sm text-gray-500">
-                                    <strong>ID:</strong> ${deviation.id}<br>
-                                    <strong>Opprettet:</strong> ${deviation.createdAt ? new Date(deviation.createdAt.toDate()).toLocaleString('no-NO') : 'Ukjent'}<br>
-                                    <strong>Kategori:</strong> ${deviation.category || 'Generell'}<br>
-                                    <strong>Lokasjon:</strong> ${deviation.location || 'Ikke spesifisert'}
+                                <div class="flex items-center space-x-4">
+                                    <span class="px-4 py-2 bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 border border-yellow-500/30 rounded-full text-sm font-medium text-yellow-300">
+                                        ${deviation.priority || 'Normal'}
+                                    </span>
+                                    <span class="px-4 py-2 bg-gradient-to-r from-blue-500/20 to-blue-600/20 border border-blue-500/30 rounded-full text-sm font-medium text-blue-300">
+                                        ${deviation.status || 'Åpen'}
+                                    </span>
+                                    <button onclick="editDeviation('${deviation.id}')" class="px-6 py-3 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white font-bold rounded-xl hover:from-indigo-600 hover:to-indigo-700 transform hover:scale-105 transition-all duration-300 shadow-lg">
+                                        Rediger
+                                    </button>
                                 </div>
-                            </li>
-                        `).join('')}
-                    </ul>
+                            </div>
+                            <div class="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                                <div class="bg-white/5 rounded-lg p-4">
+                                    <span class="text-gray-400">ID:</span>
+                                    <p class="text-white font-mono">${deviation.id}</p>
+                                </div>
+                                <div class="bg-white/5 rounded-lg p-4">
+                                    <span class="text-gray-400">Opprettet:</span>
+                                    <p class="text-white">${deviation.createdAt ? new Date(deviation.createdAt.toDate()).toLocaleString('no-NO') : 'Ukjent'}</p>
+                                </div>
+                                <div class="bg-white/5 rounded-lg p-4">
+                                    <span class="text-gray-400">Kategori:</span>
+                                    <p class="text-white">${deviation.category || 'Generell'}</p>
+                                </div>
+                                <div class="bg-white/5 rounded-lg p-4">
+                                    <span class="text-gray-400">Lokasjon:</span>
+                                    <p class="text-white">${deviation.location || 'Ikke spesifisert'}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
                 </div>
             `;
         }
@@ -131,48 +141,58 @@
             window.location.href = '/';
         }
     </script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+    </style>
 </head>
-<body class="bg-gray-100">
-    <div class="min-h-screen">
-        <!-- Header -->
-        <header class="bg-white shadow">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between items-center py-6">
-                    <div class="flex items-center">
-                        <h1 class="text-3xl font-bold text-gray-900">Avvik</h1>
-                    </div>
-                    <div class="flex items-center space-x-4">
-                        <button onclick="goToDashboard()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium">
-                            Tilbake til Dashboard
-                        </button>
-                    </div>
+<body class="text-white min-h-screen">
+    <!-- Header -->
+    <header class="glass-effect border-b border-white/20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-6">
+                <div class="flex items-center">
+                    <h1 class="text-4xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">Avvik</h1>
                 </div>
-            </div>
-        </header>
-
-        <!-- Main content -->
-        <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-            <!-- Page header -->
-            <div class="px-4 py-6 sm:px-0">
-                <div class="flex justify-between items-center mb-6">
-                    <div>
-                        <h2 class="text-2xl font-bold text-gray-900">Alle Avvik</h2>
-                        <p class="mt-1 text-sm text-gray-600">Oversikt over alle avvik i systemet</p>
-                    </div>
-                    <button onclick="loadAllDeviations()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium">
-                        Oppdater
+                <div class="flex items-center space-x-4">
+                    <button onclick="goToDashboard()" class="px-6 py-3 bg-gradient-to-r from-gray-600 to-gray-700 text-white font-bold rounded-xl hover:from-gray-700 hover:to-gray-800 transform hover:scale-105 transition-all duration-300 shadow-lg">
+                        Tilbake til Dashboard
                     </button>
                 </div>
-
-                <!-- Deviations container -->
-                <div id="deviationsContainer" class="bg-white rounded-lg shadow">
-                    <div class="text-center py-12">
-                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                        <p class="mt-2 text-sm text-gray-600">Laster avvik...</p>
-                    </div>
-                </div>
             </div>
-        </main>
-    </div>
+        </div>
+    </header>
+
+    <!-- Main content -->
+    <main class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        <!-- Page header -->
+        <div class="mb-8">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h2 class="text-3xl font-bold text-white mb-2">Alle Avvik</h2>
+                    <p class="text-xl text-gray-300">Oversikt over alle avvik i systemet</p>
+                </div>
+                <button onclick="loadAllDeviations()" class="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold rounded-xl hover:from-blue-600 hover:to-blue-700 transform hover:scale-105 transition-all duration-300 shadow-lg">
+                    Oppdater
+                </button>
+            </div>
+        </div>
+
+        <!-- Deviations container -->
+        <div id="deviationsContainer" class="glass-effect rounded-2xl p-8 shadow-2xl">
+            <div class="text-center py-16">
+                <div class="w-16 h-16 border-4 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-6"></div>
+                <p class="text-xl text-gray-300">Laster avvik...</p>
+            </div>
+        </div>
+    </main>
 </body>
 </html>
