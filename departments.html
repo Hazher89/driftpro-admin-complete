@@ -341,14 +341,14 @@
                 console.log('Loading data from Firestore...');
                 
                 // Load departments
-                const departmentsSnapshot = await db.collection('departments').get();
+                const departmentsSnapshot = await db.collection('departments').where('companyId', '==', 'driftpro-40ccd').get();
                 departments = departmentsSnapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()
                 }));
                 
                 // Load employees
-                const employeesSnapshot = await db.collection('users').get();
+                const employeesSnapshot = await db.collection('users').where('companyId', '==', 'driftpro-40ccd').get();
                 employees = employeesSnapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()
@@ -511,6 +511,7 @@
                 status: document.getElementById('departmentStatus').value,
                 maxEmployees: parseInt(document.getElementById('maxEmployees').value) || null,
                 budget: parseInt(document.getElementById('departmentBudget').value) || null,
+                companyId: "driftpro-40ccd",
                 createdAt: new Date(),
                 employees: []
             };
@@ -549,7 +550,8 @@
                     leaderId: document.getElementById('editDepartmentLeader').value || null,
                     status: document.getElementById('editDepartmentStatus').value,
                     maxEmployees: parseInt(document.getElementById('editMaxEmployees').value) || null,
-                    budget: parseInt(document.getElementById('editDepartmentBudget').value) || null
+                    budget: parseInt(document.getElementById('editDepartmentBudget').value) || null,
+                    companyId: "driftpro-40ccd"
                 };
                 
                 try {

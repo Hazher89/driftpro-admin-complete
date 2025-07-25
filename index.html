@@ -721,7 +721,7 @@
         async function loadUsers() {
             if (!selectedCompany) return;
             try {
-                const snapshot = await db.collection('users').where('companyId', '==', selectedCompany).get();
+                const snapshot = await db.collection('users').where('companyId', '==', 'driftpro-40ccd').get();
                 users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 displayUsers();
             } catch (error) {
@@ -734,7 +734,7 @@
         async function loadDepartments() {
             if (!selectedCompany) return;
             try {
-                const snapshot = await db.collection('departments').where('companyId', '==', selectedCompany).get();
+                const snapshot = await db.collection('departments').where('companyId', '==', 'driftpro-40ccd').get();
                 departments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 displayDepartments();
                 updateDepartmentFilters();
@@ -1000,7 +1000,7 @@
                 email: document.getElementById('userEmail').value,
                 role: document.getElementById('userRole').value,
                 department: document.getElementById('userDepartment').value,
-                companyId: selectedCompany,
+                companyId: "driftpro-40ccd",
                 createdAt: new Date(),
                 isActive: true
             };
