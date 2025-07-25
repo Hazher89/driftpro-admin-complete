@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dokumenter - DriftPro Admin Panel</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        function goToDashboard() {
+            window.location.href = "/";
+        }
+    </script>
 </head>
 <body class="bg-gray-900 text-white min-h-screen">
     <div style="padding: 2rem;">
@@ -15,7 +20,7 @@
                     <h1 style="font-size: 2rem; font-weight: bold;">Dokumenter</h1>
                     <p style="color: #9ca3af; margin-top: 0.5rem;">Administrer dokumenter og filer</p>
                 </div>
-                <a href="/" style="padding: 0.5rem 1rem; background: #3b82f6; border: none; border-radius: 0.5rem; color: white; cursor: pointer; text-decoration: none;">← Tilbake til Dashboard</a>
+                <a onclick="goToDashboard()" style="padding: 0.5rem 1rem; background: #3b82f6; border: none; border-radius: 0.5rem; color: white; cursor: pointer; text-decoration: none;">← Tilbake til Dashboard</a>
             </div>
 
             <!-- Content -->
