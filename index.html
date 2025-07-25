@@ -8,7 +8,17 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-</head>
+    <script>
+        // Immediate script to hide loading and show login
+        setTimeout(function() {
+            if (document.getElementById('loadingScreen')) {
+                document.getElementById('loadingScreen').style.display = 'none';
+            }
+            if (document.getElementById('loginScreen')) {
+                document.getElementById('loginScreen').style.display = 'flex';
+            }
+        }, 500);
+    </script></head>
 <body class="bg-gray-900 text-white min-h-screen">
     <!-- Loading Screen -->
     <div id="loadingScreen" class="min-h-screen flex items-center justify-center">
@@ -501,13 +511,17 @@
         let shifts = [];
 
         // Initialize app
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM loaded, going directly to login...');
+        // Use window.onload instead of DOMContentLoaded
+        window.onload = function() {
+            console.log('Window loaded, going to login...');
             
-            // Go directly to login screen
-            showLogin();
-        });        function setupCompanySearch() {
-            console.log('Setting up company search...');
+            // Force show login screen
+            document.getElementById('loadingScreen').style.display = 'none';
+            document.getElementById('loginScreen').style.display = 'flex';
+            
+            console.log('Login screen should be visible now');
+        };
+                    console.log('Setting up company search...');
             // For now, just show a simple company selection
             const companyResults = document.getElementById('companyResults');
             companyResults.innerHTML = `
