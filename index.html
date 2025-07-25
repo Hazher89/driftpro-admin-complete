@@ -344,20 +344,63 @@
     </div>
 
     <script>
-        // Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyBXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-            authDomain: "driftpro-xxxxx.firebaseapp.com",
-            projectId: "driftpro-xxxxx",
-            storageBucket: "driftpro-xxxxx.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:abcdef123456"
-        };
+        // Demo mode - Fungerer uten Firebase
+        let currentUser = null;
+        let selectedCompany = null;
+        let companies = [
+            { id: '1', name: 'DriftPro Hovedkontor' },
+            { id: '2', name: 'DriftPro Nord' },
+            { id: '3', name: 'DriftPro Vest' },
+            { id: '4', name: 'DriftPro Øst' }
+        ];
+        let users = [];
+        let departments = [];
+        let chats = [];
+        let deviations = [];
+        let documents = [];
+        let shifts = [];
 
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        const auth = firebase.auth();
+        // Demo data
+        const demoData = {
+            users: [
+                { id: '1', firstName: 'Ola', lastName: 'Nordmann', email: 'ola@driftpro.no', role: 'admin', department: 'IT', companyId: '1', isActive: true },
+                { id: '2', firstName: 'Kari', lastName: 'Hansen', email: 'kari@driftpro.no', role: 'manager', department: 'HR', companyId: '1', isActive: true },
+                { id: '3', firstName: 'Per', lastName: 'Olsen', email: 'per@driftpro.no', role: 'employee', department: 'Produksjon', companyId: '1', isActive: true },
+                { id: '4', firstName: 'Anne', lastName: 'Berg', email: 'anne@driftpro.no', role: 'manager', department: 'Salg', companyId: '2', isActive: true },
+                { id: '5', firstName: 'Erik', lastName: 'Sørensen', email: 'erik@driftpro.no', role: 'employee', department: 'Logistikk', companyId: '2', isActive: true }
+            ],
+            departments: [
+                { id: '1', name: 'IT', manager: 'Ola Nordmann', companyId: '1', users: 3 },
+                { id: '2', name: 'HR', manager: 'Kari Hansen', companyId: '1', users: 2 },
+                { id: '3', name: 'Produksjon', manager: 'Per Olsen', companyId: '1', users: 8 },
+                { id: '4', name: 'Salg', manager: 'Anne Berg', companyId: '2', users: 5 },
+                { id: '5', name: 'Logistikk', manager: 'Erik Sørensen', companyId: '2', users: 4 }
+            ],
+            chats: [
+                { id: '1', type: 'direct', name: 'Direkte meldinger', count: 12, companyId: '1' },
+                { id: '2', type: 'group', name: 'Generell chat', count: 45, companyId: '1' },
+                { id: '3', type: 'group', name: 'IT-support', count: 8, companyId: '2' },
+                { id: '4', type: 'direct', name: 'Managers', count: 6, companyId: '2' }
+            ],
+            deviations: [
+                { id: '1', description: 'Maskinfeil på produksjonslinje A', reportedBy: 'Per Olsen', priority: 'Høy', status: 'Åpen', companyId: '1' },
+                { id: '2', description: 'Sikkerhetsproblem i lager', reportedBy: 'Erik Sørensen', priority: 'Kritisk', status: 'Åpen', companyId: '2' },
+                { id: '3', description: 'IT-system nede', reportedBy: 'Ola Nordmann', priority: 'Høy', status: 'Løst', companyId: '1' },
+                { id: '4', description: 'Ventilasjon ikke fungerer', reportedBy: 'Kari Hansen', priority: 'Medium', status: 'Åpen', companyId: '1' }
+            ],
+            documents: [
+                { id: '1', name: 'Sikkerhetsmanual.pdf', uploadedBy: 'Ola Nordmann', size: '2.3 MB', downloads: 15, companyId: '1' },
+                { id: '2', name: 'Produksjonsplan.xlsx', uploadedBy: 'Per Olsen', size: '1.8 MB', downloads: 8, companyId: '1' },
+                { id: '3', name: 'HR-retningslinjer.docx', uploadedBy: 'Kari Hansen', size: '3.1 MB', downloads: 12, companyId: '1' },
+                { id: '4', name: 'Vedlikeholdsplan.pdf', uploadedBy: 'Erik Sørensen', size: '4.2 MB', downloads: 6, companyId: '2' }
+            ],
+            shifts: [
+                { id: '1', date: '2024-07-24', userName: 'Per Olsen', startTime: '08:00', endTime: '16:00', status: 'Aktiv', companyId: '1' },
+                { id: '2', date: '2024-07-24', userName: 'Erik Sørensen', startTime: '16:00', endTime: '00:00', status: 'Aktiv', companyId: '2' },
+                { id: '3', date: '2024-07-25', userName: 'Anne Berg', startTime: '09:00', endTime: '17:00', status: 'Planlagt', companyId: '2' },
+                { id: '4', date: '2024-07-25', userName: 'Kari Hansen', startTime: '08:00', endTime: '16:00', status: 'Planlagt', companyId: '1' }
+            ]
+        };
 
         let currentUser = null;
         let selectedCompany = null;
@@ -371,20 +414,8 @@
 
         // Initialize app
         document.addEventListener('DOMContentLoaded', function() {
-            checkAuthState();
+            showLogin();
         });
-
-        function checkAuthState() {
-            auth.onAuthStateChanged(function(user) {
-                if (user) {
-                    currentUser = user;
-                    showDashboard();
-                    loadAllData();
-                } else {
-                    showLogin();
-                }
-            });
-        }
 
         function showLogin() {
             document.getElementById('loadingScreen').classList.add('hidden');
@@ -405,38 +436,35 @@
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             
-            auth.signInWithEmailAndPassword(email, password)
-                .catch(function(error) {
-                    document.getElementById('loginError').textContent = error.message;
-                    document.getElementById('loginError').classList.remove('hidden');
-                });
+            // Demo login - accept any email/password
+            if (email && password) {
+                currentUser = { email: email, role: 'admin' };
+                showDashboard();
+                loadAllData();
+            } else {
+                document.getElementById('loginError').textContent = 'Vennligst fyll ut alle felter';
+                document.getElementById('loginError').classList.remove('hidden');
+            }
         });
 
         function logout() {
-            auth.signOut();
+            currentUser = null;
+            showLogin();
         }
 
-        // Load all data from Firestore
-        async function loadAllData() {
-            try {
-                await Promise.all([
-                    loadCompanies(),
-                    loadUsers(),
-                    loadDepartments(),
-                    loadChats(),
-                    loadDeviations(),
-                    loadDocuments(),
-                    loadShifts()
-                ]);
-                updateStatistics();
-            } catch (error) {
-                console.error('Error loading data:', error);
-            }
+        // Load all data from demo data
+        function loadAllData() {
+            loadCompanies();
+            loadUsers();
+            loadDepartments();
+            loadChats();
+            loadDeviations();
+            loadDocuments();
+            loadShifts();
+            updateStatistics();
         }
 
-        async function loadCompanies() {
-            const snapshot = await db.collection('companies').get();
-            companies = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        function loadCompanies() {
             updateCompanySelector();
         }
 
@@ -462,46 +490,40 @@
             }
         }
 
-        async function loadUsers() {
+        function loadUsers() {
             if (!selectedCompany) return;
-            const snapshot = await db.collection('users').where('companyId', '==', selectedCompany).get();
-            users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            users = demoData.users.filter(user => user.companyId === selectedCompany);
             displayUsers();
         }
 
-        async function loadDepartments() {
+        function loadDepartments() {
             if (!selectedCompany) return;
-            const snapshot = await db.collection('departments').where('companyId', '==', selectedCompany).get();
-            departments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            departments = demoData.departments.filter(dept => dept.companyId === selectedCompany);
             displayDepartments();
             updateDepartmentFilters();
         }
 
-        async function loadChats() {
+        function loadChats() {
             if (!selectedCompany) return;
-            const snapshot = await db.collection('chats').where('companyId', '==', selectedCompany).get();
-            chats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            chats = demoData.chats.filter(chat => chat.companyId === selectedCompany);
             displayChats();
         }
 
-        async function loadDeviations() {
+        function loadDeviations() {
             if (!selectedCompany) return;
-            const snapshot = await db.collection('deviations').where('companyId', '==', selectedCompany).get();
-            deviations = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            deviations = demoData.deviations.filter(dev => dev.companyId === selectedCompany);
             displayDeviations();
         }
 
-        async function loadDocuments() {
+        function loadDocuments() {
             if (!selectedCompany) return;
-            const snapshot = await db.collection('documents').where('companyId', '==', selectedCompany).get();
-            documents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            documents = demoData.documents.filter(doc => doc.companyId === selectedCompany);
             displayDocuments();
         }
 
-        async function loadShifts() {
+        function loadShifts() {
             if (!selectedCompany) return;
-            const snapshot = await db.collection('shifts').where('companyId', '==', selectedCompany).get();
-            shifts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            shifts = demoData.shifts.filter(shift => shift.companyId === selectedCompany);
             displayShifts();
         }
 
@@ -671,28 +693,24 @@
         }
 
         // Add user form
-        document.getElementById('addUserForm').addEventListener('submit', async function(e) {
+        document.getElementById('addUserForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
             const userData = {
+                id: (demoData.users.length + 1).toString(),
                 firstName: document.getElementById('firstName').value,
                 lastName: document.getElementById('lastName').value,
                 email: document.getElementById('userEmail').value,
                 role: document.getElementById('userRole').value,
                 department: document.getElementById('userDepartment').value,
                 companyId: selectedCompany,
-                createdAt: new Date(),
                 isActive: true
             };
 
-            try {
-                await db.collection('users').add(userData);
-                hideAddUserModal();
-                loadUsers();
-                updateStatistics();
-            } catch (error) {
-                console.error('Error adding user:', error);
-            }
+            demoData.users.push(userData);
+            hideAddUserModal();
+            loadUsers();
+            updateStatistics();
         });
 
         // Placeholder functions for other actions
