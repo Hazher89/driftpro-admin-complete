@@ -173,14 +173,28 @@
 
         // Initialize page on load
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, initializing Firebase...');
             console.log('Page loaded! JavaScript is working!');
             
             // Initialize Firebase
             const db = firebase.firestore();
             const auth = firebase.auth();
             
+            console.log('Firebase initialized successfully');
+            console.log('Firebase config:', firebaseConfig);
+            console.log('Firestore instance:', db);
+            console.log('Auth instance:', auth);
+            
             // Check if user is already logged in
             auth.onAuthStateChanged(function(user) {
+            // Add timeout to prevent infinite loading
+            setTimeout(function() {
+                if (document.getElementById('loadingScreen').style.display !== 'none') {
+                    console.log('Loading timeout reached, showing company search');
+                    showCompanySearch();
+                }
+            }, 5000);
+                console.log('Auth state changed:', user);
                 if (user) {
                     // User is already logged in, show dashboard directly
                     console.log('User already logged in, showing dashboard');
@@ -196,9 +210,10 @@
                 }
             });
         });
-
+        
         // Function to handle login
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, initializing Firebase...');
             const loginForm = document.getElementById('loginForm');
             if (loginForm) {
                 loginForm.addEventListener('submit', async function(e) {
@@ -524,6 +539,7 @@
 
         // Function to handle add user form
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, initializing Firebase...');
             const addUserForm = document.getElementById('addUserForm');
             if (addUserForm) {
                 addUserForm.addEventListener('submit', async function(e) {
@@ -586,6 +602,7 @@
 
         // Function to handle password change
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, initializing Firebase...');
             const passwordChangeForm = document.getElementById('passwordChangeForm');
             if (passwordChangeForm) {
                 passwordChangeForm.addEventListener('submit', async function(e) {
