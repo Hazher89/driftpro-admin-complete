@@ -76,7 +76,7 @@
             const companiesContainer = document.getElementById('companiesContainer');
             
             try {
-                const snapshot = await db.collection('companies').get();
+                const snapshot = await db.collection('companies').get(); // DriftPro Admin can see all companies for administration
                 const companies = [];
                 snapshot.forEach(doc => {
                     const company = { id: doc.id, ...doc.data() };
@@ -152,43 +152,53 @@
             try {
                 console.log('Loading all Firestore data...');
                 
-                const companiesSnapshot = await db.collection('companies').get();
+                const currentUser = auth.currentUser;
+                const userDoc = await db.collection('users').doc(currentUser.uid).get();
+                const userData = userDoc.data();
+                const companyId = userData?.companyId;
+                
+                if (!companyId) {
+                    console.error('No company ID found for user - GDPR compliance issue');
+                    return;
+                }
+                
+                const companiesSnapshot = await db.collection('companies').where('id', '==', companyId).get();
                 const companies = [];
                 companiesSnapshot.forEach(doc => {
                     companies.push({ id: doc.id, ...doc.data() });
                 });
                 
-                const departmentsSnapshot = await db.collection('departments').get();
+                const departmentsSnapshot = await db.collection('departments').where('companyId', '==', companyId).get();
                 const departments = [];
                 departmentsSnapshot.forEach(doc => {
                     departments.push({ id: doc.id, ...doc.data() });
                 });
                 
-                const employeesSnapshot = await db.collection('users').get();
+                const employeesSnapshot = await db.collection('users').where('companyId', '==', companyId).get();
                 const employees = [];
                 employeesSnapshot.forEach(doc => {
                     employees.push({ id: doc.id, ...doc.data() });
                 });
                 
-                const deviationsSnapshot = await db.collection('deviations').get();
+                const deviationsSnapshot = await db.collection('deviations').where('companyId', '==', companyId).get();
                 const deviations = [];
                 deviationsSnapshot.forEach(doc => {
                     deviations.push({ id: doc.id, ...doc.data() });
                 });
                 
-                const shiftsSnapshot = await db.collection('shifts').get();
+                const shiftsSnapshot = await db.collection('shifts').where('companyId', '==', companyId).get();
                 const shifts = [];
                 shiftsSnapshot.forEach(doc => {
                     shifts.push({ id: doc.id, ...doc.data() });
                 });
                 
-                const chatSnapshot = await db.collection('chat').get();
+                const chatSnapshot = await db.collection('chat').where('companyId', '==', companyId).get();
                 const chatMessages = [];
                 chatSnapshot.forEach(doc => {
                     chatMessages.push({ id: doc.id, ...doc.data() });
                 });
                 
-                const documentsSnapshot = await db.collection('documents').get();
+                const documentsSnapshot = await db.collection('documents').where('companyId', '==', companyId).get();
                 const documents = [];
                 documentsSnapshot.forEach(doc => {
                     documents.push({ id: doc.id, ...doc.data() });
