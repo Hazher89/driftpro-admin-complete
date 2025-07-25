@@ -172,14 +172,27 @@
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Page loaded! JavaScript is working!');
             
-            // Test Firestore connection
-            testFirestore();
+            // Initialize Firebase
+            firebase.initializeApp(firebaseConfig);
+            const db = firebase.firestore();
+            const auth = firebase.auth();
             
-            // Create test companies if needed
-            createTestCompanies();
-            
-            // Show company search immediately
-            showCompanySearch();
+            // Check if user is already logged in
+            auth.onAuthStateChanged(function(user) {
+                if (user) {
+                    // User is already logged in, show dashboard directly
+                    console.log('User already logged in, showing dashboard');
+                    document.getElementById('userName').textContent = user.email;
+                    loadDashboardStats();
+                    showDashboard();
+                } else {
+                    // No user logged in, show company search
+                    console.log('No user logged in, showing company search');
+                    testFirestore();
+                    createTestCompanies();
+                    showCompanySearch();
+                }
+            });
         });
 
         // Function to handle login
