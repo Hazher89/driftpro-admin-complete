@@ -103,10 +103,48 @@
                 console.log('Querying companies collection...');
                 const snapshot = await companiesRef.get();
                 console.log('Found', snapshot.size, 'companies in Firestore');
-                                console.error('Firestore test failed:', error);
-                return false;
+                
+                const companies = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    companies.push({
+                        id: doc.id,
+                        name: data.name || data.companyName || 'Ukjent navn',
+                        code: data.code || data.companyCode || doc.id
+                    });
+                });
+                
+                // Filter companies based on search query
+                const filteredCompanies = companies.filter(company => 
+                    company.name.toLowerCase().includes(query.toLowerCase()) || 
+                    company.code.toLowerCase().includes(query.toLowerCase())
+                );
+                
+                if (filteredCompanies.length === 0) {
+                    resultsContainer.innerHTML = `
+                        <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #9ca3af; text-align: center;">
+                            Ingen bedrifter funnet for "${query}"
+                        </div>
+                    `;
+                } else {
+                    resultsContainer.innerHTML = filteredCompanies.map(company => `
+                        <button onclick="selectFallbackCompany('${company.id}')" style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; cursor: pointer; text-align: left; transition: background 0.2s; hover:background: #4b5563;">
+                            <div style="font-weight: bold; margin-bottom: 0.25rem;">${company.name}</div>
+                            <div style="font-size: 0.875rem; color: #9ca3af;">${company.code}</div>
+                        </button>
+                    `).join(');
+                }
+                
+            } catch (error) {
+                console.error('Error searching companies:', error);
+                resultsContainer.innerHTML = `
+                    <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #ef4444; text-align: center;">
+                        Feil ved søk etter bedrifter. Prøv igjen.
+                    </div>
+                `;
             }
         }
+                }
         
         // Test Firestore on page load
         testFirestore();
@@ -178,66 +216,6 @@
         }
         
         // Function to handle company selection
-        // Function to search companies
-        // Function to search companies from Firestore
-        async function searchCompanies(query) {
-            const resultsContainer = document.getElementById('companySearchResults');
-            
-            if (query.length < 2) {
-                resultsContainer.innerHTML = `
-                    <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #9ca3af; text-align: center;">
-                        Skriv minst 2 bokstaver for å søke etter bedrifter
-                    </div>
-                `;
-                return;
-            }
-            
-            // Show loading state
-            resultsContainer.innerHTML = `
-                <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #9ca3af; text-align: center;">
-                    Søker etter bedrifter...
-                </div>
-            `;
-            
-            try {
-                console.log('Searching for companies with query:', query);
-                
-                // Test Firestore connection first
-                const isConnected = await testFirestore();
-        
-        // Function to create test companies if none exist
-        async function createTestCompanies() {
-            try {
-                console.log('Checking if test companies need to be created...');
-                const snapshot = await db.collection('companies').get();
-                
-                if (snapshot.empty) {
-                    console.log('No companies found, creating test companies...');
-                    
-                    const testCompanies = [
-                        { name: 'DriftPro', code: 'driftpro-40ccd', description: 'Hovedbedrift' },
-                        { name: 'Test Bedrift', code: 'test-company', description: 'Test bedrift' },
-                        { name: 'ACME Corporation', code: 'acme-corp', description: 'Teknologi bedrift' },
-                        { name: 'Tech Solutions AS', code: 'tech-solutions', description: 'IT konsulent' },
-                        { name: 'Nordic Engineering', code: 'nordic-engineering', description: 'Ingeniørfirma' }
-                    ];
-                    
-                    for (const company of testCompanies) {
-                        await db.collection('companies').add({
-                            ...company,
-                            createdAt: new Date(),
-                            isActive: true
-                        });
-                    }
-                    
-                    console.log('Created', testCompanies.length, 'test companies');
-                } else {
-                    console.log('Found', snapshot.size, 'existing companies');
-                }
-            } catch (error) {
-                console.error('Error creating test companies:', error);
-            }
-        }
         
         // Create test companies on page load
         createTestCompanies();
@@ -274,7 +252,40 @@
                 console.log('Querying companies collection...');
                 const snapshot = await companiesRef.get();
                 console.log('Found', snapshot.size, 'companies in Firestore');
-                                console.error('Error searching companies:', error);
+                
+                const companies = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    companies.push({
+                        id: doc.id,
+                        name: data.name || data.companyName || 'Ukjent navn',
+                        code: data.code || data.companyCode || doc.id
+                    });
+                });
+                
+                // Filter companies based on search query
+                const filteredCompanies = companies.filter(company => 
+                    company.name.toLowerCase().includes(query.toLowerCase()) || 
+                    company.code.toLowerCase().includes(query.toLowerCase())
+                );
+                
+                if (filteredCompanies.length === 0) {
+                    resultsContainer.innerHTML = `
+                        <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #9ca3af; text-align: center;">
+                            Ingen bedrifter funnet for "${query}"
+                        </div>
+                    `;
+                } else {
+                    resultsContainer.innerHTML = filteredCompanies.map(company => `
+                        <button onclick="selectFallbackCompany('${company.id}')" style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; cursor: pointer; text-align: left; transition: background 0.2s; hover:background: #4b5563;">
+                            <div style="font-weight: bold; margin-bottom: 0.25rem;">${company.name}</div>
+                            <div style="font-size: 0.875rem; color: #9ca3af;">${company.code}</div>
+                        </button>
+                    `).join(');
+                }
+                
+            } catch (error) {
+                console.error('Error searching companies:', error);
                 resultsContainer.innerHTML = `
                     <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #ef4444; text-align: center;">
                         Feil ved søk etter bedrifter. Prøv igjen.
@@ -282,6 +293,7 @@
                 `;
             }
         }
+                }
                 
         // Function to handle company selection
         // Function to handle company selection
@@ -363,10 +375,48 @@
                 console.log('Querying companies collection...');
                 const snapshot = await companiesRef.get();
                 console.log('Found', snapshot.size, 'companies in Firestore');
-                                console.error('Error getting company data:', error);
-                alert('Feil ved henting av bedriftsdata');
+                
+                const companies = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    companies.push({
+                        id: doc.id,
+                        name: data.name || data.companyName || 'Ukjent navn',
+                        code: data.code || data.companyCode || doc.id
+                    });
+                });
+                
+                // Filter companies based on search query
+                const filteredCompanies = companies.filter(company => 
+                    company.name.toLowerCase().includes(query.toLowerCase()) || 
+                    company.code.toLowerCase().includes(query.toLowerCase())
+                );
+                
+                if (filteredCompanies.length === 0) {
+                    resultsContainer.innerHTML = `
+                        <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #9ca3af; text-align: center;">
+                            Ingen bedrifter funnet for "${query}"
+                        </div>
+                    `;
+                } else {
+                    resultsContainer.innerHTML = filteredCompanies.map(company => `
+                        <button onclick="selectFallbackCompany('${company.id}')" style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; cursor: pointer; text-align: left; transition: background 0.2s; hover:background: #4b5563;">
+                            <div style="font-weight: bold; margin-bottom: 0.25rem;">${company.name}</div>
+                            <div style="font-size: 0.875rem; color: #9ca3af;">${company.code}</div>
+                        </button>
+                    `).join(');
+                }
+                
+            } catch (error) {
+                console.error('Error searching companies:', error);
+                resultsContainer.innerHTML = `
+                    <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #ef4444; text-align: center;">
+                        Feil ved søk etter bedrifter. Prøv igjen.
+                    </div>
+                `;
             }
         }
+                }
                         
         // Function to show company selection again
         // Function to show company selection again
@@ -476,10 +526,48 @@
                 console.log('Querying companies collection...');
                 const snapshot = await companiesRef.get();
                 console.log('Found', snapshot.size, 'companies in Firestore');
-                                console.error('Login error:', error);
-                alert(`Innlogging feilet: ${error.message}`);
-            } finally {
-                // Re-enable button
+                
+                const companies = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    companies.push({
+                        id: doc.id,
+                        name: data.name || data.companyName || 'Ukjent navn',
+                        code: data.code || data.companyCode || doc.id
+                    });
+                });
+                
+                // Filter companies based on search query
+                const filteredCompanies = companies.filter(company => 
+                    company.name.toLowerCase().includes(query.toLowerCase()) || 
+                    company.code.toLowerCase().includes(query.toLowerCase())
+                );
+                
+                if (filteredCompanies.length === 0) {
+                    resultsContainer.innerHTML = `
+                        <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #9ca3af; text-align: center;">
+                            Ingen bedrifter funnet for "${query}"
+                        </div>
+                    `;
+                } else {
+                    resultsContainer.innerHTML = filteredCompanies.map(company => `
+                        <button onclick="selectFallbackCompany('${company.id}')" style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; cursor: pointer; text-align: left; transition: background 0.2s; hover:background: #4b5563;">
+                            <div style="font-weight: bold; margin-bottom: 0.25rem;">${company.name}</div>
+                            <div style="font-size: 0.875rem; color: #9ca3af;">${company.code}</div>
+                        </button>
+                    `).join(');
+                }
+                
+            } catch (error) {
+                console.error('Error searching companies:', error);
+                resultsContainer.innerHTML = `
+                    <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #ef4444; text-align: center;">
+                        Feil ved søk etter bedrifter. Prøv igjen.
+                    </div>
+                `;
+            }
+        }
+                        // Re-enable button
                 submitBtn.disabled = false;
                 submitBtn.textContent = originalText;
             }
@@ -930,66 +1018,6 @@
         }
         
         // Function to handle company selection
-        // Function to search companies
-        // Function to search companies from Firestore
-        async function searchCompanies(query) {
-            const resultsContainer = document.getElementById('companySearchResults');
-            
-            if (query.length < 2) {
-                resultsContainer.innerHTML = `
-                    <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #9ca3af; text-align: center;">
-                        Skriv minst 2 bokstaver for å søke etter bedrifter
-                    </div>
-                `;
-                return;
-            }
-            
-            // Show loading state
-            resultsContainer.innerHTML = `
-                <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #9ca3af; text-align: center;">
-                    Søker etter bedrifter...
-                </div>
-            `;
-            
-            try {
-                console.log('Searching for companies with query:', query);
-                
-                // Test Firestore connection first
-                const isConnected = await testFirestore();
-        
-        // Function to create test companies if none exist
-        async function createTestCompanies() {
-            try {
-                console.log('Checking if test companies need to be created...');
-                const snapshot = await db.collection('companies').get();
-                
-                if (snapshot.empty) {
-                    console.log('No companies found, creating test companies...');
-                    
-                    const testCompanies = [
-                        { name: 'DriftPro', code: 'driftpro-40ccd', description: 'Hovedbedrift' },
-                        { name: 'Test Bedrift', code: 'test-company', description: 'Test bedrift' },
-                        { name: 'ACME Corporation', code: 'acme-corp', description: 'Teknologi bedrift' },
-                        { name: 'Tech Solutions AS', code: 'tech-solutions', description: 'IT konsulent' },
-                        { name: 'Nordic Engineering', code: 'nordic-engineering', description: 'Ingeniørfirma' }
-                    ];
-                    
-                    for (const company of testCompanies) {
-                        await db.collection('companies').add({
-                            ...company,
-                            createdAt: new Date(),
-                            isActive: true
-                        });
-                    }
-                    
-                    console.log('Created', testCompanies.length, 'test companies');
-                } else {
-                    console.log('Found', snapshot.size, 'existing companies');
-                }
-            } catch (error) {
-                console.error('Error creating test companies:', error);
-            }
-        }
         
         // Create test companies on page load
         createTestCompanies();
@@ -1026,7 +1054,40 @@
                 console.log('Querying companies collection...');
                 const snapshot = await companiesRef.get();
                 console.log('Found', snapshot.size, 'companies in Firestore');
-                                console.error('Error searching companies:', error);
+                
+                const companies = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    companies.push({
+                        id: doc.id,
+                        name: data.name || data.companyName || 'Ukjent navn',
+                        code: data.code || data.companyCode || doc.id
+                    });
+                });
+                
+                // Filter companies based on search query
+                const filteredCompanies = companies.filter(company => 
+                    company.name.toLowerCase().includes(query.toLowerCase()) || 
+                    company.code.toLowerCase().includes(query.toLowerCase())
+                );
+                
+                if (filteredCompanies.length === 0) {
+                    resultsContainer.innerHTML = `
+                        <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #9ca3af; text-align: center;">
+                            Ingen bedrifter funnet for "${query}"
+                        </div>
+                    `;
+                } else {
+                    resultsContainer.innerHTML = filteredCompanies.map(company => `
+                        <button onclick="selectFallbackCompany('${company.id}')" style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; cursor: pointer; text-align: left; transition: background 0.2s; hover:background: #4b5563;">
+                            <div style="font-weight: bold; margin-bottom: 0.25rem;">${company.name}</div>
+                            <div style="font-size: 0.875rem; color: #9ca3af;">${company.code}</div>
+                        </button>
+                    `).join(');
+                }
+                
+            } catch (error) {
+                console.error('Error searching companies:', error);
                 resultsContainer.innerHTML = `
                     <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #ef4444; text-align: center;">
                         Feil ved søk etter bedrifter. Prøv igjen.
@@ -1034,6 +1095,7 @@
                 `;
             }
         }
+                }
                 
         // Function to handle company selection
         // Function to handle company selection
@@ -1115,10 +1177,48 @@
                 console.log('Querying companies collection...');
                 const snapshot = await companiesRef.get();
                 console.log('Found', snapshot.size, 'companies in Firestore');
-                                console.error('Error getting company data:', error);
-                alert('Feil ved henting av bedriftsdata');
+                
+                const companies = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    companies.push({
+                        id: doc.id,
+                        name: data.name || data.companyName || 'Ukjent navn',
+                        code: data.code || data.companyCode || doc.id
+                    });
+                });
+                
+                // Filter companies based on search query
+                const filteredCompanies = companies.filter(company => 
+                    company.name.toLowerCase().includes(query.toLowerCase()) || 
+                    company.code.toLowerCase().includes(query.toLowerCase())
+                );
+                
+                if (filteredCompanies.length === 0) {
+                    resultsContainer.innerHTML = `
+                        <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #9ca3af; text-align: center;">
+                            Ingen bedrifter funnet for "${query}"
+                        </div>
+                    `;
+                } else {
+                    resultsContainer.innerHTML = filteredCompanies.map(company => `
+                        <button onclick="selectFallbackCompany('${company.id}')" style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; cursor: pointer; text-align: left; transition: background 0.2s; hover:background: #4b5563;">
+                            <div style="font-weight: bold; margin-bottom: 0.25rem;">${company.name}</div>
+                            <div style="font-size: 0.875rem; color: #9ca3af;">${company.code}</div>
+                        </button>
+                    `).join(');
+                }
+                
+            } catch (error) {
+                console.error('Error searching companies:', error);
+                resultsContainer.innerHTML = `
+                    <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #ef4444; text-align: center;">
+                        Feil ved søk etter bedrifter. Prøv igjen.
+                    </div>
+                `;
             }
         }
+                }
                         
         // Function to show company selection again
         // Function to show company selection again
@@ -1228,10 +1328,48 @@
                 console.log('Querying companies collection...');
                 const snapshot = await companiesRef.get();
                 console.log('Found', snapshot.size, 'companies in Firestore');
-                                console.error('Login error:', error);
-                alert(`Innlogging feilet: ${error.message}`);
-            } finally {
-                // Re-enable button
+                
+                const companies = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    companies.push({
+                        id: doc.id,
+                        name: data.name || data.companyName || 'Ukjent navn',
+                        code: data.code || data.companyCode || doc.id
+                    });
+                });
+                
+                // Filter companies based on search query
+                const filteredCompanies = companies.filter(company => 
+                    company.name.toLowerCase().includes(query.toLowerCase()) || 
+                    company.code.toLowerCase().includes(query.toLowerCase())
+                );
+                
+                if (filteredCompanies.length === 0) {
+                    resultsContainer.innerHTML = `
+                        <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #9ca3af; text-align: center;">
+                            Ingen bedrifter funnet for "${query}"
+                        </div>
+                    `;
+                } else {
+                    resultsContainer.innerHTML = filteredCompanies.map(company => `
+                        <button onclick="selectFallbackCompany('${company.id}')" style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; cursor: pointer; text-align: left; transition: background 0.2s; hover:background: #4b5563;">
+                            <div style="font-weight: bold; margin-bottom: 0.25rem;">${company.name}</div>
+                            <div style="font-size: 0.875rem; color: #9ca3af;">${company.code}</div>
+                        </button>
+                    `).join(');
+                }
+                
+            } catch (error) {
+                console.error('Error searching companies:', error);
+                resultsContainer.innerHTML = `
+                    <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #ef4444; text-align: center;">
+                        Feil ved søk etter bedrifter. Prøv igjen.
+                    </div>
+                `;
+            }
+        }
+                        // Re-enable button
                 submitBtn.disabled = false;
                 submitBtn.textContent = originalText;
             }
