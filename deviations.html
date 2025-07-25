@@ -5,54 +5,174 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Avvik - DriftPro Admin Panel</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script>
-        function goToDashboard() {
-            // Go back to main page - it will show dashboard if logged in
-            window.location.href = "/";
-            // Always go to dashboard if user is logged in
-            window.location.href = "/dashboard.html";
-            // Check if user is logged in and go directly to dashboard
-            if (localStorage.getItem('selectedCompanyId')) {
-                window.location.href = "/dashboard.html";
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
+            authDomain: "driftpro-40ccd.firebaseapp.com",
+            projectId: "driftpro-40ccd",
+            storageBucket: "driftpro-40ccd.appspot.com",
+            messagingSenderId: "123456789012",
+            appId: "1:123456789012:web:abcdef1234567890"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        // Check authentication on page load
+        auth.onAuthStateChanged(user => {
+            if (!user) {
+                window.location.href = '/';
             } else {
-                window.location.href = "/";
+                loadAllDeviations();
             }
-            window.location.href = "/";
+        });
+
+        // Function to load all deviations from Firestore
+        async function loadAllDeviations() {
+            try {
+                console.log('Loading all deviations from Firestore...');
+                
+                const snapshot = await db.collection('deviations').get();
+                const deviations = [];
+                snapshot.forEach(doc => {
+                    deviations.push({ id: doc.id, ...doc.data() });
+                });
+                
+                console.log('Deviations loaded:', deviations);
+                displayDeviations(deviations);
+                
+            } catch (error) {
+                console.error('Error loading deviations:', error);
+                document.getElementById('deviationsContainer').innerHTML = '<p class="text-red-500">Feil ved lasting av avvik: ' + error.message + '</p>';
+            }
+        }
+
+        // Function to display deviations
+        function displayDeviations(deviations) {
+            const container = document.getElementById('deviationsContainer');
+            
+            if (deviations.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                        </svg>
+                        <h3 class="mt-2 text-sm font-medium text-gray-900">Ingen avvik funnet</h3>
+                        <p class="mt-1 text-sm text-gray-500">Det er ingen avvik registrert i systemet ennå.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="bg-white shadow overflow-hidden sm:rounded-md">
+                    <ul class="divide-y divide-gray-200">
+                        ${deviations.map(deviation => `
+                            <li class="px-6 py-4 hover:bg-gray-50">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center">
+                                        <div class="flex-shrink-0">
+                                            <div class="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
+                                                <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                                                </svg>
+                                            </div>
+                                        </div>
+                                        <div class="ml-4">
+                                            <div class="text-sm font-medium text-gray-900">
+                                                ${deviation.title || 'Ukjent avvik'}
+                                            </div>
+                                            <div class="text-sm text-gray-500">
+                                                ${deviation.description || 'Ingen beskrivelse'}
+                                            </div>
+                                            <div class="text-sm text-gray-500">
+                                                Rapportert av: ${deviation.reportedBy || 'Ukjent'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center space-x-4">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                            ${deviation.priority || 'Normal'}
+                                        </span>
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                            ${deviation.status || 'Åpen'}
+                                        </span>
+                                        <button onclick="editDeviation('${deviation.id}')" class="text-indigo-600 hover:text-indigo-900 text-sm font-medium">
+                                            Rediger
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="mt-2 text-sm text-gray-500">
+                                    <strong>ID:</strong> ${deviation.id}<br>
+                                    <strong>Opprettet:</strong> ${deviation.createdAt ? new Date(deviation.createdAt.toDate()).toLocaleString('no-NO') : 'Ukjent'}<br>
+                                    <strong>Kategori:</strong> ${deviation.category || 'Generell'}<br>
+                                    <strong>Lokasjon:</strong> ${deviation.location || 'Ikke spesifisert'}
+                                </div>
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+            `;
+        }
+
+        // Function to edit deviation
+        function editDeviation(deviationId) {
+            alert('Redigering av avvik ' + deviationId + ' kommer snart!');
+        }
+
+        // Function to go back to dashboard
+        function goToDashboard() {
+            window.location.href = '/';
         }
     </script>
 </head>
-<body class="bg-gray-900 text-white min-h-screen">
-    <div style="padding: 2rem;">
-        <div style="max-width: 1200px; margin: 0 auto;">
-            <!-- Header -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-                <div>
-                    <h1 style="font-size: 2rem; font-weight: bold;">Avvik</h1>
-                    <p style="color: #9ca3af; margin-top: 0.5rem;">Administrer avvik og rapporter</p>
+<body class="bg-gray-100">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <header class="bg-white shadow">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center py-6">
+                    <div class="flex items-center">
+                        <h1 class="text-3xl font-bold text-gray-900">Avvik</h1>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button onclick="goToDashboard()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                            Tilbake til Dashboard
+                        </button>
+                    </div>
                 </div>
-                <a onclick="goToDashboard()" style="padding: 0.5rem 1rem; background: #3b82f6; border: none; border-radius: 0.5rem; color: white; cursor: pointer; text-decoration: none;">← Tilbake til Dashboard</a>
             </div>
+        </header>
 
-            <!-- Content -->
-            <div style="background: #1f2937; border-radius: 1rem; padding: 2rem; text-align: center;">
-                <h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem;">Avvik Funksjonalitet</h2>
-                <p style="color: #9ca3af; margin-bottom: 2rem;">Komplett avvik-administrasjon kommer snart!</p>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;">
-                    <div style="padding: 1rem; background: #374151; border-radius: 0.5rem;">
-                        <h3 style="font-weight: bold; margin-bottom: 0.5rem;">⚠️ Avvik Oversikt</h3>
-                        <p style="color: #9ca3af; font-size: 0.875rem;">Se alle rapporterte avvik</p>
+        <!-- Main content -->
+        <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+            <!-- Page header -->
+            <div class="px-4 py-6 sm:px-0">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900">Alle Avvik</h2>
+                        <p class="mt-1 text-sm text-gray-600">Oversikt over alle avvik i systemet</p>
                     </div>
-                    <div style="padding: 1rem; background: #374151; border-radius: 0.5rem;">
-                        <h3 style="font-weight: bold; margin-bottom: 0.5rem;">➕ Rapporter Avvik</h3>
-                        <p style="color: #9ca3af; font-size: 0.875rem;">Registrer nye avvik</p>
-                    </div>
-                    <div style="padding: 1rem; background: #374151; border-radius: 0.5rem;">
-                        <h3 style="font-weight: bold; margin-bottom: 0.5rem;">📊 Statistikk</h3>
-                        <p style="color: #9ca3af; font-size: 0.875rem;">Avvik-statistikk og rapporter</p>
+                    <button onclick="loadAllDeviations()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                        Oppdater
+                    </button>
+                </div>
+
+                <!-- Deviations container -->
+                <div id="deviationsContainer" class="bg-white rounded-lg shadow">
+                    <div class="text-center py-12">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                        <p class="mt-2 text-sm text-gray-600">Laster avvik...</p>
                     </div>
                 </div>
             </div>
-        </div>
+        </main>
     </div>
 </body>
 </html>

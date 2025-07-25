@@ -246,18 +246,249 @@
         // Function to load dashboard stats
         async function loadDashboardStats() {
             try {
-                // Load employee count
-                const employeesSnapshot = await db.collection('users').where('companyId', '==', localStorage.getItem('selectedCompanyId') || 'driftpro-40ccd').get();
-                document.getElementById('totalEmployees').textContent = employeesSnapshot.size;
-
-                // Load department count
-                const departmentsSnapshot = await db.collection('departments').where('companyId', '==', localStorage.getItem('selectedCompanyId') || 'driftpro-40ccd').get();
-                document.getElementById('totalDepartments').textContent = departmentsSnapshot.size;
-
-                // Mock data for now
-                document.getElementById('openDeviations').textContent = '5';
-                document.getElementById('activeShifts').textContent = '3';
+                console.log('Loading all Firestore data...');
+                await loadAllFirestoreData();
             } catch (error) {
+                console.error('Error loading dashboard stats:', error);
+            }
+        }
+        
+        // Function to load all Firestore data
+        async function loadAllFirestoreData() {
+            try {
+                console.log('Loading all Firestore data...');
+                
+                // Load companies
+                const companiesSnapshot = await db.collection('companies').get();
+                const companies = [];
+                companiesSnapshot.forEach(doc => {
+                    companies.push({ id: doc.id, ...doc.data() });
+                });
+                console.log('Companies:', companies);
+                
+                // Load departments
+                const departmentsSnapshot = await db.collection('departments').get();
+                const departments = [];
+                departmentsSnapshot.forEach(doc => {
+                    departments.push({ id: doc.id, ...doc.data() });
+                });
+                console.log('Departments:', departments);
+                
+                // Load employees
+                const employeesSnapshot = await db.collection('users').get();
+                const employees = [];
+                employeesSnapshot.forEach(doc => {
+                    employees.push({ id: doc.id, ...doc.data() });
+                });
+                console.log('Employees:', employees);
+                
+                // Load deviations
+                const deviationsSnapshot = await db.collection('deviations').get();
+                const deviations = [];
+                deviationsSnapshot.forEach(doc => {
+                    deviations.push({ id: doc.id, ...doc.data() });
+                });
+                console.log('Deviations:', deviations);
+                
+                // Load shifts
+                const shiftsSnapshot = await db.collection('shifts').get();
+                const shifts = [];
+                shiftsSnapshot.forEach(doc => {
+                    shifts.push({ id: doc.id, ...doc.data() });
+                });
+                console.log('Shifts:', shifts);
+                
+                // Load chat messages
+                const chatSnapshot = await db.collection('chat').get();
+                const chatMessages = [];
+                chatSnapshot.forEach(doc => {
+                    chatMessages.push({ id: doc.id, ...doc.data() });
+                });
+                console.log('Chat messages:', chatMessages);
+                
+                // Load documents
+                const documentsSnapshot = await db.collection('documents').get();
+                const documents = [];
+                documentsSnapshot.forEach(doc => {
+                    documents.push({ id: doc.id, ...doc.data() });
+                });
+                console.log('Documents:', documents);
+                
+                // Update dashboard with all data
+                updateDashboardWithData({
+                    companies,
+                    departments,
+                    employees,
+                    deviations,
+                    shifts,
+                    chatMessages,
+                    documents
+                });
+                
+            } catch (error) {
+                console.error('Error loading Firestore data:', error);
+            }
+        }
+        
+        // Function to update dashboard with all data
+        function updateDashboardWithData(data) {
+            const statsContainer = document.getElementById('dashboardStats');
+            if (!statsContainer) return;
+            
+            statsContainer.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                                </svg>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-600">Bedrifter</p>
+                                <p class="text-2xl font-semibold text-gray-900">${data.companies.length}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-green-100 text-green-600">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                </svg>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-600">Ansatte</p>
+                                <p class="text-2xl font-semibold text-gray-900">${data.employees.length}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <div class="flex items-center">
+                            <div class="div class="p-3 rounded-full bg-purple-100 text-purple-600">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                                </svg>
+                            </div>
+                            <div class="ml-4">
+                                <div class="p-3 rounded-full bg-purple-100 text-purple-600">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                                    </svg>
+                                </div>
+                                <div class="ml-4">
+                                    <p class="text-sm font-medium text-gray-600">Avdelinger</p>
+                                    <p class="text-2xl font-semibold text-gray-900">${data.departments.length}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-red-100 text-red-600">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                                </svg>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-600">Avvik</p>
+                                <p class="text-2xl font-semibold text-gray-900">${data.deviations.length}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Recent Employees -->
+                    <div class="bg-white rounded-lg shadow">
+                        <div class="px-6 py-4 border-b border-gray-200">
+                            <h3 class="text-lg font-medium text-gray-900">Siste Ansatte</h3>
+                        </div>
+                        <div class="p-6">
+                            ${data.employees.slice(0, 5).map(employee => `
+                                <div class="flex items-center justify-between py-2">
+                                    <div class="flex items-center">
+                                        <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                                            <span class="text-sm font-medium text-gray-600">${employee.name ? employee.name.charAt(0).toUpperCase() : 'A'}</span>
+                                        </div>
+                                        <div class="ml-3">
+                                            <p class="text-sm font-medium text-gray-900">${employee.name || 'Ukjent navn'}</p>
+                                            <p class="text-sm text-gray-500">${employee.email || 'Ingen e-post'}</p>
+                                        </div>
+                                    </div>
+                                    <span class="text-sm text-gray-500">${employee.department || 'Ingen avdeling'}</span>
+                                </div>
+                            `).join(')
+                            ${data.employees.length === 0 ? '<p class="text-gray-500 text-sm">Ingen ansatte funnet</p>' : '}
+                        </div>
+                    </div>
+                    
+                    <!-- Recent Deviations -->
+                    <div class="bg-white rounded-lg shadow">
+                        <div class="px-6 py-4 border-b border-gray-200">
+                            <h3 class="text-lg font-medium text-gray-900">Siste Avvik</h3>
+                        </div>
+                        <div class="p-6">
+                            ${data.deviations.slice(0, 5).map(deviation => `
+                                <div class="flex items-center justify-between py-2">
+                                    <div class="flex items-center">
+                                        <div class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                                            <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h12.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                                            </svg>
+                                        </div>
+                                        <div class="ml-3">
+                                            <p class="text-sm font-medium text-gray-900">${deviation.title || 'Ukjent avvik'}</p>
+                                            <p class="text-sm text-gray-500">${deviation.description || 'Ingen beskrivelse'}</p>
+                                        </div>
+                                    </div>
+                                    <span class="text-sm text-gray-500">${deviation.status || 'Åpen'}</span>
+                                </div>
+                            `).join(')
+                            ${data.deviations.length === 0 ? '<p class="text-gray-500 text-sm">Ingen avvik funnet</p>' : '}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- All Data Summary -->
+                <div class="mt-8 bg-white rounded-lg shadow">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-medium text-gray-900">Alle Data fra Firestore</h3>
+                    </div>
+                    <div class="p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+                            <div class="bg-blue-50 p-4 rounded">
+                                <h4 class="font-medium text-blue-900">Bedrifter (${data.companies.length})</h4>
+                                <ul class="mt-2 text-blue-700">
+                                    ${data.companies.map(company => ``<li>• ${company.name || company.id}</li>`).join(')
+                                </ul>
+                            </div>
+                            <div class="bg-green-50 p-4 rounded">
+                                <h4 class="font-medium text-green-900">Avdelinger (${data.departments.length})</h4>
+                                <ul class="mt-2 text-green-700">
+                                    ${data.departments.map(dept => ``<li>• ${dept.name || dept.id}</li>`).join(')
+                                </ul>
+                            </div>
+                            <div class="bg-purple-50 p-4 rounded">
+                                <h4 class="font-medium text-purple-900">Skift (${data.shifts.length})</h4>
+                                <ul class="mt-2 text-purple-700">
+                                    ${data.shifts.map(shift => ``<li>• ${shift.title || shift.id}</li>`).join(')
+                                </ul>
+                            </div>
+                            <div class="bg-yellow-50 p-4 rounded">
+                                <h4 class="font-medium text-yellow-900">Dokumenter (${data.documents.length})</h4>
+                                <ul class="mt-2 text-yellow-700">
+                                    ${data.documents.map(doc => ``<li>• ${doc.title || doc.id}</li>`).join(')
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
                 console.error('Error loading dashboard stats:', error);
             }
         }
