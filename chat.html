@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat - DriftPro Admin Panel</title>
+    <title>DriftPro - Chat</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -24,161 +24,107 @@
         const db = firebase.firestore();
         const auth = firebase.auth();
 
-        // Check authentication on page load
+        // Check authentication state
         auth.onAuthStateChanged(user => {
-            if (!user) {
-                window.location.href = '/';
+            if (user) {
+                showDashboard(user);
             } else {
-                loadAllChatMessages();
+                window.location.href = '/';
             }
         });
 
-        // Function to load all chat messages from Firestore
-        async function loadAllChatMessages() {
+        async function showDashboard(user) {
+            document.getElementById('userName').textContent = user.email;
+            await loadChatMessages(user);
+        }
+
+        async function loadChatMessages(user) {
             try {
-                console.log('Loading all chat messages from Firestore...');
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                const userData = userDoc.data();
+                const companyId = userData?.companyId;
                 
-                const snapshot = await db.collection('chat').get();
-                const messages = [];
-                snapshot.forEach(doc => {
-                    messages.push({ id: doc.id, ...doc.data() });
+                if (!companyId) {
+                    console.error('No company ID found for user - GDPR compliance issue');
+                    return;
+                }
+                
+                const chatSnapshot = await db.collection('chat').where('companyId', '==', companyId).get();
+                const chatMessages = [];
+                chatSnapshot.forEach(doc => {
+                    chatMessages.push({ id: doc.id, ...doc.data() });
                 });
                 
-                console.log('Chat messages loaded:', messages);
-                displayChatMessages(messages);
-                
+                updateChatList(chatMessages);
             } catch (error) {
                 console.error('Error loading chat messages:', error);
-                document.getElementById('chatContainer').innerHTML = '<p class="text-red-400">Feil ved lasting av chat meldinger: ' + error.message + '</p>';
+                showNotification('Feil ved lasting av chat-meldinger', 'error');
             }
         }
 
-        // Function to display chat messages
-        function displayChatMessages(messages) {
-            const container = document.getElementById('chatContainer');
+        function updateChatList(chatMessages) {
+            const chatContainer = document.getElementById('chatContainer');
+            if (!chatContainer) return;
             
-            if (messages.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-16">
-                        <div class="w-24 h-24 bg-gradient-to-br from-teal-500/20 to-cyan-600/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <svg class="w-12 h-12 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
-                            </svg>
+            chatContainer.innerHTML = chatMessages.map(message => `
+                <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-all duration-300">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-12 h-12 bg-gradient-to-br from-teal-500 to-teal-600 rounded-lg flex items-center justify-center">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-800">${message.sender || 'Ukjent bruker'}</h3>
+                                <p class="text-gray-600">${message.message || 'Ingen melding'}</p>
+                                <p class="text-sm text-gray-500">Tid: ${message.timestamp || 'Ukjent'}</p>
+                            </div>
                         </div>
-                        <h3 class="text-2xl font-bold text-white mb-2">Ingen meldinger funnet</h3>
-                        <p class="text-gray-400">Det er ingen chat meldinger i systemet ennå.</p>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-3 py-1 bg-teal-100 text-teal-800 text-sm font-medium rounded-full">
+                                Ny
+                            </span>
+                        </div>
                     </div>
-                `;
-                return;
-            }
-
-            container.innerHTML = `
-                <div class="space-y-8">
-                    ${messages.map(message => `
-                        <div class="neo-card rounded-3xl p-8 hover:scale-105 transition-all duration-500 shadow-2xl group">
-                            <div class="flex items-center justify-between mb-8">
-                                <div class="flex items-center">
-                                    <div class="w-20 h-20 bg-gradient-to-br from-teal-400 to-cyan-500 rounded-3xl flex items-center justify-center shadow-2xl group-hover:rotate-12 transition-transform duration-500">
-                                        <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
-                                        </svg>
-                                    </div>
-                                    <div class="ml-8">
-                                        <h3 class="text-3xl font-bold text-white mb-2 group-hover:text-teal-300 transition-colors duration-300">
-                                            ${message.sender || 'Ukjent bruker'}
-                                        </h3>
-                                        <p class="text-gray-300 mb-2 text-lg">
-                                            ${message.content || 'Ingen innhold'}
-                                        </p>
-                                        <p class="text-gray-400">
-                                            ${message.timestamp ? new Date(message.timestamp.toDate()).toLocaleString('no-NO') : 'Ukjent tidspunkt'}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div class="flex items-center space-x-4">
-                                    <span class="px-6 py-3 bg-gradient-to-r from-teal-500/20 to-cyan-600/20 border border-teal-500/30 rounded-full text-lg font-medium text-teal-300">
-                                        ${message.type || 'Standard'}
-                                    </span>
-                                    <span class="px-6 py-3 bg-gradient-to-r from-emerald-500/20 to-green-600/20 border border-emerald-500/30 rounded-full text-lg font-medium text-emerald-300">
-                                        ${message.status || 'Sendt'}
-                                    </span>
-                                    <button onclick="replyToMessage('${message.id}')" class="px-8 py-4 bg-gradient-to-r from-teal-400 to-cyan-500 text-white font-bold rounded-2xl hover:from-teal-500 hover:to-cyan-600 transform hover:scale-105 transition-all duration-300 shadow-2xl glow-effect">
-                                        Svar
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                                <div class="neo-card rounded-2xl p-6">
-                                    <span class="text-gray-400 text-sm">ID:</span>
-                                    <p class="text-white font-mono text-lg">${message.id}</p>
-                                </div>
-                                <div class="neo-card rounded-2xl p-6">
-                                    <span class="text-gray-400 text-sm">Rom:</span>
-                                    <p class="text-white text-lg">${message.room || 'Generell'}</p>
-                                </div>
-                                <div class="neo-card rounded-2xl p-6">
-                                    <span class="text-gray-400 text-sm">Avdeling:</span>
-                                    <p class="text-white text-lg">${message.department || 'Ikke tildelt'}</p>
-                                </div>
-                                <div class="neo-card rounded-2xl p-6">
-                                    <span class="text-gray-400 text-sm">Lengde:</span>
-                                    <p class="text-white text-lg">${message.content ? message.content.length : 0} tegn</p>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('')}
                 </div>
-            `;
+            `).join('');
         }
 
-        // Function to reply to message
-        function replyToMessage(messageId) {
-            alert('Svar på melding ' + messageId + ' kommer snart!');
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 transition-all duration-300 transform translate-x-full ${
+                type === 'error' ? 'bg-red-500 text-white' : 
+                type === 'success' ? 'bg-green-500 text-white' : 
+                'bg-blue-500 text-white'
+            }`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.classList.remove('translate-x-full');
+            }, 100);
+            
+            setTimeout(() => {
+                notification.classList.add('translate-x-full');
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
         }
 
-        // Function to go back to dashboard
-        function goToDashboard() {
-            window.location.href = '/';
+        function logout() {
+            auth.signOut().then(() => {
+                window.location.href = '/';
+            });
         }
     </script>
     <style>
         body {
-            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 25%, #16213e 50%, #0f3460 75%, #533483 100%);
-            min-height: 100vh;
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-        }
-        
-        .neo-card {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 
-                0 8px 32px rgba(0, 0, 0, 0.3),
-                inset 0 1px 0 rgba(255, 255, 255, 0.1);
-        }
-        
-        .neo-card:hover {
-            border-color: rgba(255, 255, 255, 0.2);
-            box-shadow: 
-                0 16px 64px rgba(0, 0, 0, 0.4),
-                inset 0 1px 0 rgba(255, 255, 255, 0.2);
-        }
-        
-        .floating-animation {
-            animation: float 6s ease-in-out infinite;
-        }
-        
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-20px); }
-        }
-        
-        .glow-effect {
-            box-shadow: 0 0 20px rgba(20, 184, 166, 0.5);
-        }
-        
-        .text-glow {
-            text-shadow: 0 0 10px rgba(20, 184, 166, 0.5);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
         }
         
         .gradient-text {
@@ -189,49 +135,43 @@
         }
     </style>
 </head>
-<body class="text-white min-h-screen">
+<body class="text-gray-800">
     <!-- Header -->
-    <header class="neo-card border-b border-white/10 sticky top-0 z-40">
-        <div class="max-w-7xl mx-auto px-8 py-6">
-            <div class="flex justify-between items-center">
-                <div class="flex items-center space-x-6">
-                    <div class="w-12 h-12 bg-gradient-to-br from-teal-400 to-cyan-500 rounded-2xl flex items-center justify-center shadow-2xl">
-                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
-                        </svg>
-                    </div>
-                    <h1 class="text-3xl font-bold gradient-text">Chat</h1>
+    <header class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-3">
+                    <a href="/" class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                        </div>
+                        <h1 class="text-xl font-bold gradient-text">DriftPro</h1>
+                    </a>
                 </div>
+                
                 <div class="flex items-center space-x-4">
-                    <button onclick="goToDashboard()" class="px-6 py-3 bg-gradient-to-r from-gray-600 to-gray-700 text-white font-bold rounded-xl hover:from-gray-700 hover:to-gray-800 transform hover:scale-105 transition-all duration-300 shadow-2xl">
-                        Tilbake til Dashboard
+                    <span class="text-sm text-gray-600">Logget inn som: <span id="userName" class="font-semibold text-gray-800"></span></span>
+                    <button onclick="logout()" class="px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-all duration-200">
+                        Logg Ut
                     </button>
                 </div>
             </div>
         </div>
     </header>
 
-    <!-- Main content -->
-    <main class="max-w-7xl mx-auto py-12 px-8">
-        <!-- Page header -->
-        <div class="mb-12">
-            <div class="flex justify-between items-center">
-                <div>
-                    <h2 class="text-4xl font-bold text-white mb-4">Alle Chat Meldinger</h2>
-                    <p class="text-xl text-gray-300">Oversikt over alle chat meldinger i systemet</p>
-                </div>
-                <button onclick="loadAllChatMessages()" class="px-8 py-4 bg-gradient-to-r from-teal-400 to-cyan-500 text-white font-bold rounded-2xl hover:from-teal-500 hover:to-cyan-600 transform hover:scale-105 transition-all duration-300 shadow-2xl glow-effect">
-                    Oppdater
-                </button>
-            </div>
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Page Header -->
+        <div class="mb-8">
+            <h2 class="text-3xl font-bold text-gray-800 mb-2">Chat</h2>
+            <p class="text-gray-600">Kommunikasjon i bedriften</p>
         </div>
 
-        <!-- Chat container -->
-        <div id="chatContainer" class="neo-card rounded-3xl p-8 shadow-2xl">
-            <div class="text-center py-16">
-                <div class="w-16 h-16 border-4 border-white/30 border-t-teal-400 rounded-full animate-spin mx-auto mb-6"></div>
-                <p class="text-xl text-gray-300">Laster chat meldinger...</p>
-            </div>
+        <!-- Chat Messages List -->
+        <div id="chatContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Chat messages will be loaded here -->
         </div>
     </main>
 </body>
