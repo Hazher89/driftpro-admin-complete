@@ -10,6 +10,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script>
+        console.log("Script loaded successfully");
         // Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
@@ -32,6 +33,7 @@
 
         // Check authentication
         auth.onAuthStateChanged(user => {
+            console.log("Auth state changed:", user ? "Logged in" : "Not logged in");
             if (user) {
                 currentUser = user;
                 loadUserData();
@@ -41,6 +43,7 @@
         });
 
         async function loadUserData() {
+            console.log("loadUserData called");
             try {
                 const userDoc = await db.collection('users').doc(currentUser.uid).get();
                 const userData = userDoc.data();
@@ -54,6 +57,7 @@
             }
         }
 
+            console.log("loadDepartments called");
         async function loadDepartments() {
             try {
                 const snapshot = await db.collection('departments')
@@ -136,7 +140,6 @@
             document.getElementById('departmentForm').reset();
         }
 
-        }
 
         }
 
@@ -362,6 +365,7 @@
         
         function showCreateDepartmentModal() {
             document.getElementById("createDepartmentModal").style.display = "flex";
+            console.log("showCreateDepartmentModal called");
             updateEmployeeSelects();
             document.getElementById("departmentForm").reset();
             document.getElementById("departmentActive").checked = true;
@@ -465,6 +469,7 @@
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <!-- Page Header -->
         <div class="mb-8">
+            <button onclick="alert("Test button works!")" class="px-4 py-2 bg-red-500 text-white rounded-lg mb-4">Test Button</button>
             <h2 class="text-3xl font-bold text-gray-800 mb-2">🏢 Avdelinger</h2>
             <p class="text-gray-600 mb-6">Administrer avdelinger, tildel ledere og organisér ansatte</p>
             <button onclick="showCreateDepartmentModal()" class="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-lg hover:from-blue-600 hover:to-blue-700 transform hover:scale-105 transition-all duration-200 shadow-lg">
