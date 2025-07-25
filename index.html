@@ -44,6 +44,19 @@
                 </button>
             </form>
             
+            <!-- Demo login buttons for testing -->
+            <div class="mt-4 pt-4 border-t border-gray-600">
+                <p class="text-sm text-gray-400 mb-2">Test med demo-kontoer:</p>
+                <div class="space-y-2">
+                    <button onclick="demoLogin('admin@driftpro.no', 'admin123')" class="w-full bg-green-600 hover:bg-green-700 p-2 rounded text-sm">
+                        Admin Demo
+                    </button>
+                    <button onclick="demoLogin('manager@driftpro.no', 'manager123')" class="w-full bg-yellow-600 hover:bg-yellow-700 p-2 rounded text-sm">
+                        Manager Demo
+                    </button>
+                </div>
+            </div>
+            
             <div id="loginError" class="mt-4 text-red-400 text-center hidden"></div>
         </div>
     </div>
@@ -369,22 +382,20 @@
         let documents = [];
         let shifts = [];
 
-        let currentUser = null;
-        let selectedCompany = null;
-        let companies = [];
-        let users = [];
-        let departments = [];
-        let chats = [];
-        let deviations = [];
-        let documents = [];
-        let shifts = [];
-
         // Initialize app
         document.addEventListener('DOMContentLoaded', function() {
             checkAuthState();
         });
 
         function checkAuthState() {
+            // Add timeout to prevent infinite loading
+            setTimeout(() => {
+                if (document.getElementById('loadingScreen').classList.contains('hidden') === false) {
+                    console.log('Firebase connection timeout - showing login');
+                    showLogin();
+                }
+            }, 5000);
+
             auth.onAuthStateChanged(function(user) {
                 if (user) {
                     currentUser = user;
@@ -393,6 +404,9 @@
                 } else {
                     showLogin();
                 }
+            }).catch(function(error) {
+                console.error('Firebase auth error:', error);
+                showLogin();
             });
         }
 
@@ -426,6 +440,12 @@
             auth.signOut();
         }
 
+        function demoLogin(email, password) {
+            document.getElementById('email').value = email;
+            document.getElementById('password').value = password;
+            document.getElementById('loginForm').dispatchEvent(new Event('submit'));
+        }
+
         // Load all data from Firestore
         async function loadAllData() {
             try {
@@ -445,9 +465,21 @@
         }
 
         async function loadCompanies() {
-            const snapshot = await db.collection('companies').get();
-            companies = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            updateCompanySelector();
+            try {
+                const snapshot = await db.collection('companies').get();
+                companies = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                updateCompanySelector();
+            } catch (error) {
+                console.error('Error loading companies:', error);
+                // If no companies exist, create demo companies
+                companies = [
+                    { id: 'demo1', name: 'DriftPro Hovedkontor' },
+                    { id: 'demo2', name: 'DriftPro Nord' },
+                    { id: 'demo3', name: 'DriftPro Vest' },
+                    { id: 'demo4', name: 'DriftPro Øst' }
+                ];
+                updateCompanySelector();
+            }
         }
 
         function updateCompanySelector() {
@@ -474,45 +506,82 @@
 
         async function loadUsers() {
             if (!selectedCompany) return;
-            const snapshot = await db.collection('users').where('companyId', '==', selectedCompany).get();
-            users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            displayUsers();
+            try {
+                const snapshot = await db.collection('users').where('companyId', '==', selectedCompany).get();
+                users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                displayUsers();
+            } catch (error) {
+                console.error('Error loading users:', error);
+                users = [];
+                displayUsers();
+            }
         }
 
         async function loadDepartments() {
             if (!selectedCompany) return;
-            const snapshot = await db.collection('departments').where('companyId', '==', selectedCompany).get();
-            departments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            displayDepartments();
-            updateDepartmentFilters();
+            try {
+                const snapshot = await db.collection('departments').where('companyId', '==', selectedCompany).get();
+                departments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                displayDepartments();
+                updateDepartmentFilters();
+            } catch (error) {
+                console.error('Error loading departments:', error);
+                departments = [];
+                displayDepartments();
+                updateDepartmentFilters();
+            }
         }
 
         async function loadChats() {
             if (!selectedCompany) return;
-            const snapshot = await db.collection('chats').where('companyId', '==', selectedCompany).get();
-            chats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            displayChats();
+            try {
+                const snapshot = await db.collection('chats').where('companyId', '==', selectedCompany).get();
+                chats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                displayChats();
+            } catch (error) {
+                console.error('Error loading chats:', error);
+                chats = [];
+                displayChats();
+            }
         }
 
         async function loadDeviations() {
             if (!selectedCompany) return;
-            const snapshot = await db.collection('deviations').where('companyId', '==', selectedCompany).get();
-            deviations = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            displayDeviations();
+            try {
+                const snapshot = await db.collection('deviations').where('companyId', '==', selectedCompany).get();
+                deviations = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                displayDeviations();
+            } catch (error) {
+                console.error('Error loading deviations:', error);
+                deviations = [];
+                displayDeviations();
+            }
         }
 
         async function loadDocuments() {
             if (!selectedCompany) return;
-            const snapshot = await db.collection('documents').where('companyId', '==', selectedCompany).get();
-            documents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            displayDocuments();
+            try {
+                const snapshot = await db.collection('documents').where('companyId', '==', selectedCompany).get();
+                documents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                displayDocuments();
+            } catch (error) {
+                console.error('Error loading documents:', error);
+                documents = [];
+                displayDocuments();
+            }
         }
 
         async function loadShifts() {
             if (!selectedCompany) return;
-            const snapshot = await db.collection('shifts').where('companyId', '==', selectedCompany).get();
-            shifts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            displayShifts();
+            try {
+                const snapshot = await db.collection('shifts').where('companyId', '==', selectedCompany).get();
+                shifts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                displayShifts();
+            } catch (error) {
+                console.error('Error loading shifts:', error);
+                shifts = [];
+                displayShifts();
+            }
         }
 
         function updateStatistics() {
