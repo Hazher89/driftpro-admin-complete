@@ -36,28 +36,6 @@
         
         // Function to create test companies if none exist
         // Function to search companies from Firestore
-        // Initialize page on load
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOMContentLoaded triggered!');
-            alert('JavaScript is working!');
-                        console.log('Page loaded! JavaScript is working!');
-            
-            // Initialize Firebase
-            firebase.initializeApp(firebaseConfig);
-            const db = firebase.firestore();
-            const auth = firebase.auth();
-            
-            // Test Firestore connection
-            testFirestore();
-            
-            // Create test companies if needed
-            createTestCompanies();
-            
-            // Show company search after a short delay
-            setTimeout(() => {
-                showCompanySearch();
-            }, 1000);
-        });
         
         // Function to show company search screen
         function showCompanySearch() {
@@ -732,3 +710,220 @@
     </style>
 </body>
 </html>
+
+        // Initialize page on load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Page loaded! JavaScript is working!');
+            
+            // Initialize Firebase
+            firebase.initializeApp(firebaseConfig);
+            const db = firebase.firestore();
+            const auth = firebase.auth();
+            
+            // Test Firestore connection
+            testFirestore();
+            
+            // Create test companies if needed
+            createTestCompanies();
+            
+            // Show company search after a short delay
+            setTimeout(() => {
+                showCompanySearch();
+            }, 1000);
+        });
+        
+        // Function to show company search screen
+        function showCompanySearch() {
+            document.getElementById('loadingScreen').style.display = 'none';
+            document.getElementById('companySearchScreen').style.display = 'flex';
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'none';
+        }
+        
+        // Function to show login screen
+        function showLogin() {
+            document.getElementById('loadingScreen').style.display = 'none';
+            document.getElementById('companySearchScreen').style.display = 'none';
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('dashboard').style.display = 'none';
+        }
+        
+        // Function to show dashboard
+        function showDashboard() {
+            document.getElementById('loadingScreen').style.display = 'none';
+            document.getElementById('companySearchScreen').style.display = 'none';
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+        }
+        
+        // Function to handle company selection
+        function selectFallbackCompany(companyId) {
+            console.log('Selected company:', companyId);
+            showLogin();
+        }
+        
+        // Function to handle login
+        document.addEventListener('DOMContentLoaded', function() {
+            const loginForm = document.getElementById('loginForm');
+            if (loginForm) {
+                loginForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const email = document.getElementById('loginEmail').value;
+                    const password = document.getElementById('loginPassword').value;
+                    
+                    try {
+                        const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
+                        const user = userCredential.user;
+                        
+                        // Check if user needs to change password
+                        const userDoc = await firebase.firestore().collection('users').doc(user.uid).get();
+                        if (userDoc.exists && userDoc.data().mustChangePassword) {
+                            showPasswordChangeModal();
+                        } else {
+                            showDashboard();
+                            document.getElementById('userName').textContent = user.email;
+                        }
+                    } catch (error) {
+                        console.error('Login error:', error);
+                        alert('Feil ved innlogging. Sjekk e-post og passord.');
+                    }
+                });
+            }
+        });
+        
+        // Function to show add user modal
+        function showAddUserModal() {
+            document.getElementById('addUserModal').style.display = 'block';
+            loadDepartments();
+        }
+        
+        // Function to hide add user modal
+        function hideAddUserModal() {
+            document.getElementById('addUserModal').style.display = 'none';
+        }
+        
+        // Function to load departments for dropdown
+        async function loadDepartments() {
+            try {
+                const snapshot = await firebase.firestore().collection('departments').where('companyId', '==', 'driftpro-40ccd').get();
+                const select = document.getElementById('userDepartment');
+                select.innerHTML = '<option value="">Velg avdeling</option>';
+                
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const option = document.createElement('option');
+                    option.value = doc.id;
+                    option.textContent = data.name;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading departments:', error);
+            }
+        }
+        
+        // Function to handle add user form
+        document.addEventListener('DOMContentLoaded', function() {
+            const addUserForm = document.getElementById('addUserForm');
+            if (addUserForm) {
+                addUserForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const submitButton = e.target.querySelector('button[type="submit"]');
+                    submitButton.disabled = true;
+                    submitButton.textContent = 'Oppretter...';
+                    
+                    const name = document.getElementById('userName').value;
+                    const email = document.getElementById('userEmail').value;
+                    const departmentId = document.getElementById('userDepartment').value;
+                    
+                    try {
+                        // Generate temporary password
+                        const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).toUpperCase().slice(-4) + '!1';
+                        
+                        // Create user in Firebase Auth
+                        const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, tempPassword);
+                        const user = userCredential.user;
+                        
+                        // Store user data in Firestore
+                        await firebase.firestore().collection('users').doc(user.uid).set({
+                            name: name,
+                            email: email,
+                            departmentId: departmentId,
+                            companyId: 'driftpro-40ccd',
+                            mustChangePassword: true,
+                            createdAt: new Date()
+                        });
+                        
+                        // Send email with temporary password (placeholder)
+                        console.log('Temporary password for', email, ':', tempPassword);
+                        
+                        alert(`Bruker opprettet! Midlertidig passord: ${tempPassword}`);
+                        hideAddUserModal();
+                        e.target.reset();
+                        
+                    } catch (error) {
+                        console.error('Error creating user:', error);
+                        alert('Feil ved opprettelse av bruker: ' + error.message);
+                    } finally {
+                        submitButton.disabled = false;
+                        submitButton.textContent = 'Opprett';
+                    }
+                });
+            }
+        });
+        
+        // Function to show password change modal
+        function showPasswordChangeModal() {
+            document.getElementById('passwordChangeModal').style.display = 'block';
+        }
+        
+        // Function to hide password change modal
+        function hidePasswordChangeModal() {
+            document.getElementById('passwordChangeModal').style.display = 'none';
+        }
+        
+        // Function to handle password change
+        document.addEventListener('DOMContentLoaded', function() {
+            const passwordChangeForm = document.getElementById('passwordChangeForm');
+            if (passwordChangeForm) {
+                passwordChangeForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const newPassword = document.getElementById('newPassword').value;
+                    const confirmPassword = document.getElementById('confirmPassword').value;
+                    
+                    if (newPassword !== confirmPassword) {
+                        alert('Passordene matcher ikke!');
+                        return;
+                    }
+                    
+                    try {
+                        const user = firebase.auth().currentUser;
+                        await user.updatePassword(newPassword);
+                        
+                        // Update user document
+                        await firebase.firestore().collection('users').doc(user.uid).update({
+                            mustChangePassword: false
+                        });
+                        
+                        hidePasswordChangeModal();
+                        showDashboard();
+                        document.getElementById('userName').textContent = user.email;
+                        
+                    } catch (error) {
+                        console.error('Error changing password:', error);
+                        alert('Feil ved endring av passord: ' + error.message);
+                    }
+                });
+            }
+        });
+        
+        // Function to logout
+        function logout() {
+            firebase.auth().signOut().then(() => {
+                showCompanySearch();
+            }).catch((error) => {
+                console.error('Logout error:', error);
+            });
+        }
