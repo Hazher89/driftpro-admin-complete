@@ -310,6 +310,19 @@
 
     <!-- Main content -->
     <main class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        <!-- Page header -->
+        <div class="mb-8">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h2 class="text-3xl font-bold text-white mb-2">DriftPro Admin Panel</h2>
+                    <p class="text-xl text-gray-300">Oversikt over alle systemer og data</p>
+                </div>
+                <button onclick="loadDashboardStats()" class="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold rounded-xl hover:from-blue-600 hover:to-blue-700 transform hover:scale-105 transition-all duration-300 shadow-lg">
+                    Oppdater
+                </button>
+            </div>
+        </div>
+
         <!-- Navigation -->
         <div class="mb-12">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
@@ -400,7 +413,7 @@
         </div>
 
         <!-- Dashboard Stats -->
-        <div id="dashboardStats">
+        <div id="dashboardStats" class="glass-effect rounded-2xl p-8 shadow-2xl">
             <div class="text-center py-12">
                 <div class="w-16 h-16 border-4 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-6"></div>
                 <p class="text-xl text-gray-300">Laster dashboard data...</p>
