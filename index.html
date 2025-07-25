@@ -68,13 +68,47 @@
                 </button>
             </form>
             
-            <div class="mt-4 text-center">
-                <button onclick="backToCompanySearch()" class="text-blue-400 hover:text-blue-300 text-sm">
-                    ← Tilbake til bedriftssøk
+            <div class="mt-4 text-center space-y-2">
+                <button onclick="showForgotPassword()" class="text-blue-400 hover:text-blue-300 text-sm">
+                    Glemt passord?
                 </button>
+                <div class="block">
+                    <button onclick="backToCompanySearch()" class="text-blue-400 hover:text-blue-300 text-sm">
+                        ← Tilbake til bedriftssøk
+                    </button>
+                </div>
             </div>
             
             <div id="loginError" class="mt-4 text-red-400 text-center hidden"></div>
+        </div>
+    </div>
+
+    <!-- Forgot Password Screen -->
+    <div id="forgotPasswordScreen" class="min-h-screen flex items-center justify-center hidden">
+        <div class="bg-gray-800 p-8 rounded-lg shadow-lg max-w-md w-full">
+            <div class="text-center mb-6">
+                <h1 class="text-3xl font-bold">Glemt passord</h1>
+                <p class="text-gray-400 mt-2">Skriv inn din e-post for å få tilbakestillingslenke</p>
+            </div>
+            
+            <form id="forgotPasswordForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">E-post</label>
+                    <input type="email" id="forgotEmail" required class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500">
+                </div>
+                
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 p-3 rounded-lg font-semibold">
+                    Send tilbakestillingslenke
+                </button>
+            </form>
+            
+            <div class="mt-4 text-center">
+                <button onclick="backToLogin()" class="text-blue-400 hover:text-blue-300 text-sm">
+                    ← Tilbake til innlogging
+                </button>
+            </div>
+            
+            <div id="forgotPasswordMessage" class="mt-4 text-center hidden"></div>
         </div>
     </div>
 
@@ -418,8 +452,21 @@
         function showLogin() {
             document.getElementById('loadingScreen').classList.add('hidden');
             document.getElementById('companySearchScreen').classList.add('hidden');
+            document.getElementById('forgotPasswordScreen').classList.add('hidden');
             document.getElementById('loginScreen').classList.remove('hidden');
             document.getElementById('dashboard').classList.add('hidden');
+        }
+
+        function showForgotPassword() {
+            document.getElementById('loadingScreen').classList.add('hidden');
+            document.getElementById('companySearchScreen').classList.add('hidden');
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('forgotPasswordScreen').classList.remove('hidden');
+            document.getElementById('dashboard').classList.add('hidden');
+        }
+
+        function backToLogin() {
+            showLogin();
         }
 
         function backToCompanySearch() {
@@ -430,6 +477,7 @@
             document.getElementById('loadingScreen').classList.add('hidden');
             document.getElementById('companySearchScreen').classList.add('hidden');
             document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('forgotPasswordScreen').classList.add('hidden');
             document.getElementById('dashboard').classList.remove('hidden');
             document.getElementById('currentUser').textContent = currentUser.email;
         }
@@ -455,6 +503,30 @@
                 .catch(function(error) {
                     document.getElementById('loginError').textContent = error.message;
                     document.getElementById('loginError').classList.remove('hidden');
+                });
+        });
+
+        // Forgot password form
+        document.getElementById('forgotPasswordForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const email = document.getElementById('forgotEmail').value;
+            const messageDiv = document.getElementById('forgotPasswordMessage');
+            
+            // Show loading state
+            messageDiv.innerHTML = '<div class="text-blue-400">Sender tilbakestillingslenke...</div>';
+            messageDiv.classList.remove('hidden');
+            
+            auth.sendPasswordResetEmail(email)
+                .then(function() {
+                    messageDiv.innerHTML = '<div class="text-green-400">✓ Tilbakestillingslenke sendt! Sjekk din e-post.</div>';
+                    messageDiv.classList.remove('hidden');
+                    
+                    // Clear the form
+                    document.getElementById('forgotEmail').value = '';
+                })
+                .catch(function(error) {
+                    messageDiv.innerHTML = '<div class="text-red-400">✗ Feil: ' + error.message + '</div>';
+                    messageDiv.classList.remove('hidden');
                 });
         });
 
