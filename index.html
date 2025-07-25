@@ -157,10 +157,6 @@
                 const userData = userDoc.data();
                 const userRole = userData?.role;
                 const companyId = userData?.companyId;
-                console.log("User companyId:", companyId);
-                console.log("User role:", userRole);
-                console.log("Full userData:", userData);                console.log("User companyId:", companyId);
-                console.log("User role:", userRole);                
                 // Show DriftPro Admin card only for users in DriftPro AS company (companyId: "dXM97h0lQ2ru5N6k1wFw")
                 const driftproAdminCard = document.getElementById("driftproAdminCard");
                 if (driftproAdminCard) {
@@ -588,6 +584,12 @@
                                     </svg>
                                 </div>
                                 <div class="ml-4">
+                                    <p class="text-lg font-bold text-white group-hover:text-purple-300 transition-colors duration-300">DriftPro Admin</p>
+                                    <p class="text-sm text-gray-300">Bedriftsadministrasjon</p>
+                                </div>
+                            </div>
+                        </a>
+                    </div>                                <div class="ml-4">
                                     <p class="text-lg font-bold text-white group-hover:text-purple-300 transition-colors duration-300">DriftPro Admin</p>
                                     <p class="text-sm text-gray-300">Bedriftsadministrasjon</p>
                                 </div>
