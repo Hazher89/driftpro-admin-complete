@@ -101,32 +101,23 @@
                     `;
                 } else {
                     companiesContainer.innerHTML = companies.map(company => `
-                        <div class="neo-card rounded-3xl p-8 hover:scale-105 transition-all duration-500 cursor-pointer group" onclick="selectCompany('${company.id}')">
-                            <div class="flex items-center justify-between mb-6">
-                                <div class="w-16 h-16 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-2xl flex items-center justify-center shadow-2xl group-hover:rotate-12 transition-transform duration-500">
-                                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="neo-card rounded-2xl p-6 hover:scale-105 transition-all duration-300 cursor-pointer group" onclick="selectCompany('${company.id}')">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="w-12 h-12 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-xl flex items-center justify-center shadow-lg group-hover:rotate-12 transition-transform duration-300">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                                     </svg>
                                 </div>
-                                <div class="text-right">
-                                    <span class="px-4 py-2 bg-gradient-to-r from-green-500/20 to-green-600/20 border border-green-500/30 rounded-full text-sm font-medium text-green-300">
-                                        Aktiv
-                                    </span>
-                                </div>
+                                <span class="px-3 py-1 bg-gradient-to-r from-green-500/20 to-green-600/20 border border-green-500/30 rounded-full text-sm font-medium text-green-300">
+                                    Aktiv
+                                </span>
                             </div>
-                            <h3 class="text-2xl font-bold text-white mb-3 group-hover:text-cyan-300 transition-colors duration-300">
+                            <h3 class="text-xl font-bold text-white mb-2 group-hover:text-cyan-300 transition-colors duration-300">
                                 ${company.name || 'Ukjent bedrift'}
                             </h3>
-                            <p class="text-gray-300 mb-4">
+                            <p class="text-gray-300 text-sm">
                                 ${company.description || 'Ingen beskrivelse tilgjengelig'}
                             </p>
-                            <div class="flex items-center justify-between">
-                                <span class="text-sm text-gray-400">ID: ${company.id}</span>
-                                <div class="flex items-center space-x-2">
-                                    <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                                    <span class="text-sm text-green-400">Online</span>
-                                </div>
-                            </div>
                         </div>
                     `).join('');
                 }
@@ -225,119 +216,111 @@
             if (!statsContainer) return;
             
             statsContainer.innerHTML = `
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
-                    <div class="neo-card rounded-3xl p-8 hover:scale-105 transition-all duration-500 group">
-                        <div class="flex items-center justify-between mb-6">
-                            <div class="w-16 h-16 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-2xl flex items-center justify-center shadow-2xl group-hover:rotate-12 transition-transform duration-500">
-                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="neo-card rounded-2xl p-6 hover:scale-105 transition-all duration-300 group">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-xl flex items-center justify-center shadow-lg group-hover:rotate-12 transition-transform duration-300">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                                 </svg>
                             </div>
-                            <div class="text-right">
-                                <span class="px-4 py-2 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 rounded-full text-sm font-medium text-cyan-300">
-                                    ${data.companies.length}
-                                </span>
-                            </div>
+                            <span class="px-3 py-1 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 rounded-full text-sm font-medium text-cyan-300">
+                                ${data.companies.length}
+                            </span>
                         </div>
-                        <h3 class="text-2xl font-bold text-white mb-2">Bedrifter</h3>
-                        <p class="text-gray-300">Totalt antall registrerte bedrifter</p>
+                        <h3 class="text-xl font-bold text-white mb-1">Bedrifter</h3>
+                        <p class="text-gray-300 text-sm">Totalt antall registrerte bedrifter</p>
                     </div>
                     
-                    <div class="neo-card rounded-3xl p-8 hover:scale-105 transition-all duration-500 group">
-                        <div class="flex items-center justify-between mb-6">
-                            <div class="w-16 h-16 bg-gradient-to-br from-emerald-400 to-green-500 rounded-2xl flex items-center justify-center shadow-2xl group-hover:rotate-12 transition-transform duration-500">
-                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="neo-card rounded-2xl p-6 hover:scale-105 transition-all duration-300 group">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 bg-gradient-to-br from-emerald-400 to-green-500 rounded-xl flex items-center justify-center shadow-lg group-hover:rotate-12 transition-transform duration-300">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
                                 </svg>
                             </div>
-                            <div class="text-right">
-                                <span class="px-4 py-2 bg-gradient-to-r from-emerald-500/20 to-green-500/20 border border-emerald-500/30 rounded-full text-sm font-medium text-emerald-300">
-                                    ${data.employees.length}
-                                </span>
-                            </div>
+                            <span class="px-3 py-1 bg-gradient-to-r from-emerald-500/20 to-green-500/20 border border-emerald-500/30 rounded-full text-sm font-medium text-emerald-300">
+                                ${data.employees.length}
+                            </span>
                         </div>
-                        <h3 class="text-2xl font-bold text-white mb-2">Ansatte</h3>
-                        <p class="text-gray-300">Aktive ansatte i systemet</p>
+                        <h3 class="text-xl font-bold text-white mb-1">Ansatte</h3>
+                        <p class="text-gray-300 text-sm">Aktive ansatte i systemet</p>
                     </div>
                     
-                    <div class="neo-card rounded-3xl p-8 hover:scale-105 transition-all duration-500 group">
-                        <div class="flex items-center justify-between mb-6">
-                            <div class="w-16 h-16 bg-gradient-to-br from-violet-400 to-purple-500 rounded-2xl flex items-center justify-center shadow-2xl group-hover:rotate-12 transition-transform duration-500">
-                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="neo-card rounded-2xl p-6 hover:scale-105 transition-all duration-300 group">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 bg-gradient-to-br from-violet-400 to-purple-500 rounded-xl flex items-center justify-center shadow-lg group-hover:rotate-12 transition-transform duration-300">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
                                 </svg>
                             </div>
-                            <div class="text-right">
-                                <span class="px-4 py-2 bg-gradient-to-r from-violet-500/20 to-purple-500/20 border border-violet-500/30 rounded-full text-sm font-medium text-violet-300">
-                                    ${data.departments.length}
-                                </span>
-                            </div>
+                            <span class="px-3 py-1 bg-gradient-to-r from-violet-500/20 to-purple-500/20 border border-violet-500/30 rounded-full text-sm font-medium text-violet-300">
+                                ${data.departments.length}
+                            </span>
                         </div>
-                        <h3 class="text-2xl font-bold text-white mb-2">Avdelinger</h3>
-                        <p class="text-gray-300">Organiserte avdelinger</p>
+                        <h3 class="text-xl font-bold text-white mb-1">Avdelinger</h3>
+                        <p class="text-gray-300 text-sm">Organiserte avdelinger</p>
                     </div>
                     
-                    <div class="neo-card rounded-3xl p-8 hover:scale-105 transition-all duration-500 group">
-                        <div class="flex items-center justify-between mb-6">
-                            <div class="w-16 h-16 bg-gradient-to-br from-rose-400 to-red-500 rounded-2xl flex items-center justify-center shadow-2xl group-hover:rotate-12 transition-transform duration-500">
-                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="neo-card rounded-2xl p-6 hover:scale-105 transition-all duration-300 group">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 bg-gradient-to-br from-rose-400 to-red-500 rounded-xl flex items-center justify-center shadow-lg group-hover:rotate-12 transition-transform duration-300">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
                                 </svg>
                             </div>
-                            <div class="text-right">
-                                <span class="px-4 py-2 bg-gradient-to-r from-rose-500/20 to-red-500/20 border border-rose-500/30 rounded-full text-sm font-medium text-rose-300">
-                                    ${data.deviations.length}
-                                </span>
-                            </div>
+                            <span class="px-3 py-1 bg-gradient-to-r from-rose-500/20 to-red-500/20 border border-rose-500/30 rounded-full text-sm font-medium text-rose-300">
+                                ${data.deviations.length}
+                            </span>
                         </div>
-                        <h3 class="text-2xl font-bold text-white mb-2">Avvik</h3>
-                        <p class="text-gray-300">Åpne avvik som krever oppmerksomhet</p>
+                        <h3 class="text-xl font-bold text-white mb-1">Avvik</h3>
+                        <p class="text-gray-300 text-sm">Åpne avvik som krever oppmerksomhet</p>
                     </div>
                 </div>
                 
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-                    <div class="neo-card rounded-3xl shadow-2xl">
-                        <div class="px-8 py-6 border-b border-white/10">
-                            <h3 class="text-2xl font-bold text-white">Siste Ansatte</h3>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="neo-card rounded-2xl shadow-xl">
+                        <div class="px-6 py-4 border-b border-white/10">
+                            <h3 class="text-xl font-bold text-white">Siste Ansatte</h3>
                         </div>
-                        <div class="p-8">
+                        <div class="p-6">
                             ${data.employees.slice(0, 5).map(employee => `
-                                <div class="flex items-center justify-between py-4 hover:bg-white/5 rounded-2xl px-4 transition-all duration-300 group">
+                                <div class="flex items-center justify-between py-3 hover:bg-white/5 rounded-xl px-3 transition-colors duration-200">
                                     <div class="flex items-center">
-                                        <div class="w-12 h-12 bg-gradient-to-br from-emerald-400 to-green-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-                                            <span class="text-lg font-bold text-white">${employee.name ? employee.name.charAt(0).toUpperCase() : 'A'}</span>
+                                        <div class="w-10 h-10 bg-gradient-to-br from-emerald-400 to-green-500 rounded-xl flex items-center justify-center shadow-lg">
+                                            <span class="text-sm font-bold text-white">${employee.name ? employee.name.charAt(0).toUpperCase() : 'A'}</span>
                                         </div>
                                         <div class="ml-4">
-                                            <p class="text-lg font-semibold text-white group-hover:text-emerald-300 transition-colors duration-300">${employee.name || 'Ukjent navn'}</p>
-                                            <p class="text-gray-300">${employee.email || 'Ingen e-post'}</p>
+                                            <p class="text-sm font-semibold text-white">${employee.name || 'Ukjent navn'}</p>
+                                            <p class="text-sm text-gray-300">${employee.email || 'Ingen e-post'}</p>
                                         </div>
                                     </div>
-                                    <span class="px-4 py-2 bg-gradient-to-r from-emerald-500/20 to-green-500/20 border border-emerald-500/30 rounded-full text-sm font-medium text-emerald-300">${employee.department || 'Ingen avdeling'}</span>
+                                    <span class="text-sm text-gray-300 bg-white/10 px-3 py-1 rounded-full">${employee.department || 'Ingen avdeling'}</span>
                                 </div>
                             `).join('')}
                             ${data.employees.length === 0 ? '<p class="text-gray-400 text-center py-8">Ingen ansatte funnet</p>' : ''}
                         </div>
                     </div>
                     
-                    <div class="neo-card rounded-3xl shadow-2xl">
-                        <div class="px-8 py-6 border-b border-white/10">
-                            <h3 class="text-2xl font-bold text-white">Siste Avvik</h3>
+                    <div class="neo-card rounded-2xl shadow-xl">
+                        <div class="px-6 py-4 border-b border-white/10">
+                            <h3 class="text-xl font-bold text-white">Siste Avvik</h3>
                         </div>
-                        <div class="p-8">
+                        <div class="p-6">
                             ${data.deviations.slice(0, 5).map(deviation => `
-                                <div class="flex items-center justify-between py-4 hover:bg-white/5 rounded-2xl px-4 transition-all duration-300 group">
+                                <div class="flex items-center justify-between py-3 hover:bg-white/5 rounded-xl px-3 transition-colors duration-200">
                                     <div class="flex items-center">
-                                        <div class="w-12 h-12 bg-gradient-to-br from-rose-400 to-red-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-                                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <div class="w-10 h-10 bg-gradient-to-br from-rose-400 to-red-500 rounded-xl flex items-center justify-center shadow-lg">
+                                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
                                             </svg>
                                         </div>
                                         <div class="ml-4">
-                                            <p class="text-lg font-semibold text-white group-hover:text-rose-300 transition-colors duration-300">${deviation.title || 'Ukjent avvik'}</p>
-                                            <p class="text-gray-300">${deviation.description || 'Ingen beskrivelse'}</p>
+                                            <p class="text-sm font-semibold text-white">${deviation.title || 'Ukjent avvik'}</p>
+                                            <p class="text-sm text-gray-300">${deviation.description || 'Ingen beskrivelse'}</p>
                                         </div>
                                     </div>
-                                    <span class="px-4 py-2 bg-gradient-to-r from-rose-500/20 to-red-500/20 border border-rose-500/30 rounded-full text-sm font-medium text-rose-300">${deviation.status || 'Åpen'}</span>
+                                    <span class="text-sm text-gray-300 bg-white/10 px-3 py-1 rounded-full">${deviation.status || 'Åpen'}</span>
                                 </div>
                             `).join('')}
                             ${data.deviations.length === 0 ? '<p class="text-gray-400 text-center py-8">Ingen avvik funnet</p>' : ''}
@@ -419,7 +402,7 @@
 
     <!-- Company Search Screen -->
     <div id="companySearchScreen" class="min-h-screen flex items-center justify-center p-8" style="display: none;">
-        <div class="w-full max-w-6xl">
+        <div class="w-full max-w-4xl">
             <div class="text-center mb-12">
                 <div class="w-24 h-24 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-3xl flex items-center justify-center mx-auto mb-8 floating-animation shadow-2xl">
                     <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -443,7 +426,7 @@
                 </div>
             </div>
             
-            <div id="companiesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div id="companiesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <!-- Companies will be loaded here -->
             </div>
         </div>
@@ -494,19 +477,19 @@
     <div id="dashboardScreen" class="min-h-screen" style="display: none;">
         <!-- Header -->
         <header class="neo-card border-b border-white/10 sticky top-0 z-40">
-            <div class="max-w-7xl mx-auto px-8 py-6">
+            <div class="max-w-7xl mx-auto px-6 py-4">
                 <div class="flex justify-between items-center">
-                    <div class="flex items-center space-x-6">
-                        <div class="w-12 h-12 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-2xl flex items-center justify-center shadow-2xl">
-                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-10 h-10 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-xl flex items-center justify-center shadow-lg">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                             </svg>
                         </div>
-                        <h1 class="text-3xl font-bold gradient-text">DriftPro Admin Panel</h1>
+                        <h1 class="text-2xl font-bold gradient-text">DriftPro Admin Panel</h1>
                     </div>
-                    <div class="flex items-center space-x-6">
-                        <span class="text-gray-300">Logget inn som: <span id="userName" class="font-semibold text-white"></span></span>
-                        <button onclick="logout()" class="px-6 py-3 bg-gradient-to-r from-rose-400 to-red-500 text-white font-bold rounded-xl hover:from-rose-500 hover:to-red-600 transform hover:scale-105 transition-all duration-300 shadow-2xl">
+                    <div class="flex items-center space-x-4">
+                        <span class="text-gray-300 text-sm">Logget inn som: <span id="userName" class="font-semibold text-white"></span></span>
+                        <button onclick="logout()" class="px-4 py-2 bg-gradient-to-r from-rose-400 to-red-500 text-white font-bold rounded-xl hover:from-rose-500 hover:to-red-600 transform hover:scale-105 transition-all duration-300 shadow-lg">
                             Logg Ut
                         </button>
                     </div>
@@ -515,91 +498,91 @@
         </header>
 
         <!-- Main content -->
-        <main class="max-w-7xl mx-auto py-12 px-8">
+        <main class="max-w-7xl mx-auto py-8 px-6">
             <!-- Navigation -->
-            <div class="mb-16">
-                <h2 class="text-4xl font-bold text-white mb-8 text-center">Velg Seksjon</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-8">
-                    <a href="/employees.html" class="neo-card rounded-3xl p-8 hover:scale-105 transition-all duration-500 group">
+            <div class="mb-12">
+                <h2 class="text-3xl font-bold text-white mb-8 text-center">Velg Seksjon</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+                    <a href="/employees.html" class="neo-card rounded-2xl p-6 hover:scale-105 transition-all duration-300 group">
                         <div class="flex items-center">
-                            <div class="w-16 h-16 bg-gradient-to-br from-emerald-400 to-green-500 rounded-2xl flex items-center justify-center shadow-2xl group-hover:rotate-12 transition-transform duration-500">
-                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div class="w-12 h-12 bg-gradient-to-br from-emerald-400 to-green-500 rounded-xl flex items-center justify-center shadow-lg group-hover:rotate-12 transition-transform duration-300">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
                                 </svg>
                             </div>
-                            <div class="ml-6">
-                                <p class="text-xl font-bold text-white group-hover:text-emerald-300 transition-colors duration-300">Ansatte</p>
-                                <p class="text-gray-300">Administrer ansatte</p>
+                            <div class="ml-4">
+                                <p class="text-lg font-bold text-white group-hover:text-emerald-300 transition-colors duration-300">Ansatte</p>
+                                <p class="text-sm text-gray-300">Administrer ansatte</p>
                             </div>
                         </div>
                     </a>
                     
-                    <a href="/departments.html" class="neo-card rounded-3xl p-8 hover:scale-105 transition-all duration-500 group">
+                    <a href="/departments.html" class="neo-card rounded-2xl p-6 hover:scale-105 transition-all duration-300 group">
                         <div class="flex items-center">
-                            <div class="w-16 h-16 bg-gradient-to-br from-violet-400 to-purple-500 rounded-2xl flex items-center justify-center shadow-2xl group-hover:rotate-12 transition-transform duration-500">
-                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div class="w-12 h-12 bg-gradient-to-br from-violet-400 to-purple-500 rounded-xl flex items-center justify-center shadow-lg group-hover:rotate-12 transition-transform duration-300">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
                                 </svg>
                             </div>
-                            <div class="ml-6">
-                                <p class="text-xl font-bold text-white group-hover:text-violet-300 transition-colors duration-300">Avdelinger</p>
-                                <p class="text-gray-300">Organiser avdelinger</p>
+                            <div class="ml-4">
+                                <p class="text-lg font-bold text-white group-hover:text-violet-300 transition-colors duration-300">Avdelinger</p>
+                                <p class="text-sm text-gray-300">Organiser avdelinger</p>
                             </div>
                         </div>
                     </a>
                     
-                    <a href="/deviations.html" class="neo-card rounded-3xl p-8 hover:scale-105 transition-all duration-500 group">
+                    <a href="/deviations.html" class="neo-card rounded-2xl p-6 hover:scale-105 transition-all duration-300 group">
                         <div class="flex items-center">
-                            <div class="w-16 h-16 bg-gradient-to-br from-rose-400 to-red-500 rounded-2xl flex items-center justify-center shadow-2xl group-hover:rotate-12 transition-transform duration-500">
-                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div class="w-12 h-12 bg-gradient-to-br from-rose-400 to-red-500 rounded-xl flex items-center justify-center shadow-lg group-hover:rotate-12 transition-transform duration-300">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
                                 </svg>
                             </div>
-                            <div class="ml-6">
-                                <p class="text-xl font-bold text-white group-hover:text-rose-300 transition-colors duration-300">Avvik</p>
-                                <p class="text-gray-300">Håndter avvik</p>
+                            <div class="ml-4">
+                                <p class="text-lg font-bold text-white group-hover:text-rose-300 transition-colors duration-300">Avvik</p>
+                                <p class="text-sm text-gray-300">Håndter avvik</p>
                             </div>
                         </div>
                     </a>
                     
-                    <a href="/shifts.html" class="neo-card rounded-3xl p-8 hover:scale-105 transition-all duration-500 group">
+                    <a href="/shifts.html" class="neo-card rounded-2xl p-6 hover:scale-105 transition-all duration-300 group">
                         <div class="flex items-center">
-                            <div class="w-16 h-16 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-2xl group-hover:rotate-12 transition-transform duration-500">
-                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div class="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg group-hover:rotate-12 transition-transform duration-300">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
                             </div>
-                            <div class="ml-6">
-                                <p class="text-xl font-bold text-white group-hover:text-amber-300 transition-colors duration-300">Skiftplaner</p>
-                                <p class="text-gray-300">Planlegg skift</p>
+                            <div class="ml-4">
+                                <p class="text-lg font-bold text-white group-hover:text-amber-300 transition-colors duration-300">Skiftplaner</p>
+                                <p class="text-sm text-gray-300">Planlegg skift</p>
                             </div>
                         </div>
                     </a>
                     
-                    <a href="/chat.html" class="neo-card rounded-3xl p-8 hover:scale-105 transition-all duration-500 group">
+                    <a href="/chat.html" class="neo-card rounded-2xl p-6 hover:scale-105 transition-all duration-300 group">
                         <div class="flex items-center">
-                            <div class="w-16 h-16 bg-gradient-to-br from-teal-400 to-cyan-500 rounded-2xl flex items-center justify-center shadow-2xl group-hover:rotate-12 transition-transform duration-500">
-                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div class="w-12 h-12 bg-gradient-to-br from-teal-400 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg group-hover:rotate-12 transition-transform duration-300">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
                                 </svg>
                             </div>
-                            <div class="ml-6">
-                                <p class="text-xl font-bold text-white group-hover:text-teal-300 transition-colors duration-300">Chat</p>
-                                <p class="text-gray-300">Kommunikasjon</p>
+                            <div class="ml-4">
+                                <p class="text-lg font-bold text-white group-hover:text-teal-300 transition-colors duration-300">Chat</p>
+                                <p class="text-sm text-gray-300">Kommunikasjon</p>
                             </div>
                         </div>
                     </a>
                     
-                    <a href="/documents.html" class="neo-card rounded-3xl p-8 hover:scale-105 transition-all duration-500 group">
+                    <a href="/documents.html" class="neo-card rounded-2xl p-6 hover:scale-105 transition-all duration-300 group">
                         <div class="flex items-center">
-                            <div class="w-16 h-16 bg-gradient-to-br from-indigo-400 to-blue-500 rounded-2xl flex items-center justify-center shadow-2xl group-hover:rotate-12 transition-transform duration-500">
-                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div class="w-12 h-12 bg-gradient-to-br from-indigo-400 to-blue-500 rounded-xl flex items-center justify-center shadow-lg group-hover:rotate-12 transition-transform duration-300">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                                 </svg>
                             </div>
-                            <div class="ml-6">
-                                <p class="text-xl font-bold text-white group-hover:text-indigo-300 transition-colors duration-300">Dokumenter</p>
-                                <p class="text-gray-300">Fildokumenter</p>
+                            <div class="ml-4">
+                                <p class="text-lg font-bold text-white group-hover:text-indigo-300 transition-colors duration-300">Dokumenter</p>
+                                <p class="text-sm text-gray-300">Fildokumenter</p>
                             </div>
                         </div>
                     </a>
@@ -608,7 +591,7 @@
 
             <!-- Dashboard Stats -->
             <div id="dashboardStats">
-                <div class="text-center py-16">
+                <div class="text-center py-12">
                     <div class="w-16 h-16 border-4 border-white/30 border-t-cyan-400 rounded-full animate-spin mx-auto mb-6"></div>
                     <p class="text-xl text-gray-300">Laster dashboard data...</p>
                 </div>
