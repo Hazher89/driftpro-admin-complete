@@ -9,6 +9,47 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
+            authDomain: "driftpro-40ccd.firebaseapp.com",
+            projectId: "driftpro-40ccd",
+            storageBucket: "driftpro-40ccd.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef123456"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        
+        console.log('Firebase initialized');
+        
+        // Test function to check if Firestore is working
+        async function testFirestore() {
+            try {
+                console.log('Searching for companies with query:', query);
+                
+                // Test Firestore connection first
+                const isConnected = await testFirestore();
+                if (!isConnected) {
+                    throw new Error('Firestore connection failed');
+                }
+                
+                // Search in Firestore companies collection
+                const companiesRef = db.collection('companies');
+                console.log('Querying companies collection...');
+                const snapshot = await companiesRef.get();
+                console.log('Found', snapshot.size, 'companies in Firestore');
+                                console.error('Firestore test failed:', error);
+                return false;
+            }
+        }
+        
+        // Test Firestore on page load
+        testFirestore();
+            </script>    <script>
         // Hide loading screen immediately when fallback shows
         if (document.getElementById('loadingScreen')) {
             document.getElementById('loadingScreen').style.display = 'none';
@@ -37,43 +78,20 @@
             `;
             
             try {
-                // Search in Firestore companies collection
-                const companiesRef = db.collection('companies');
-                const snapshot = await companiesRef.get();
+                console.log('Searching for companies with query:', query);
                 
-                const companies = [];
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    companies.push({
-                        id: doc.id,
-                        name: data.name || data.companyName || 'Ukjent navn',
-                        code: data.code || data.companyCode || doc.id
-                    });
-                });
-                
-                // Filter companies based on search query
-                const filteredCompanies = companies.filter(company => 
-                    company.name.toLowerCase().includes(query.toLowerCase()) || 
-                    company.code.toLowerCase().includes(query.toLowerCase())
-                );
-                
-                if (filteredCompanies.length === 0) {
-                    resultsContainer.innerHTML = `
-                        <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #9ca3af; text-align: center;">
-                            Ingen bedrifter funnet for "${query}"
-                        </div>
-                    `;
-                } else {
-                    resultsContainer.innerHTML = filteredCompanies.map(company => `
-                        <button onclick="selectFallbackCompany('${company.id}')" style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; cursor: pointer; text-align: left; transition: background 0.2s; hover:background: #4b5563;">
-                            <div style="font-weight: bold; margin-bottom: 0.25rem;">${company.name}</div>
-                            <div style="font-size: 0.875rem; color: #9ca3af;">${company.code}</div>
-                        </button>
-                    `).join(');
+                // Test Firestore connection first
+                const isConnected = await testFirestore();
+                if (!isConnected) {
+                    throw new Error('Firestore connection failed');
                 }
                 
-            } catch (error) {
-                console.error('Error searching companies:', error);
+                // Search in Firestore companies collection
+                const companiesRef = db.collection('companies');
+                console.log('Querying companies collection...');
+                const snapshot = await companiesRef.get();
+                console.log('Found', snapshot.size, 'companies in Firestore');
+                                console.error('Error searching companies:', error);
                 resultsContainer.innerHTML = `
                     <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #ef4444; text-align: center;">
                         Feil ved søk etter bedrifter. Prøv igjen.
@@ -88,38 +106,20 @@
             console.log('Company selected:', companyId);
             
             try {
-                // Get company data from Firestore
-                const companyDoc = await db.collection('companies').doc(companyId).get();
-                let companyName = companyId;
+                console.log('Searching for companies with query:', query);
                 
-                if (companyDoc.exists) {
-                    const data = companyDoc.data();
-                    companyName = data.name || data.companyName || companyId;
+                // Test Firestore connection first
+                const isConnected = await testFirestore();
+                if (!isConnected) {
+                    throw new Error('Firestore connection failed');
                 }
                 
-                // Update fallback screen to show login
-                const fallbackScreen = document.getElementById('fallbackScreen');
-                fallbackScreen.innerHTML = `
-                    <div style="text-align: center; color: white; background: #1f2937; padding: 2rem; border-radius: 0.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.5); max-width: 400px; width: 100%;">
-                        <h1 style="font-size: 2rem; margin-bottom: 0.5rem; color: #3b82f6;">DriftPro Admin</h1>
-                        <p style="margin-bottom: 2rem; color: #9ca3af;">Logg inn for <span style="color: #3b82f6;">${companyName}</span></p>
-                        <form onsubmit="handleFallbackLogin(event)" style="display: flex; flex-direction: column; gap: 1rem;">
-                            <div>
-                                <label style="display: block; text-align: left; margin-bottom: 0.5rem; color: #d1d5db;">E-post</label>
-                                <input type="email" id="fallbackEmail" placeholder="Skriv inn e-post" required style="width: 100%; padding: 0.75rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; box-sizing: border-box;">
-                            </div>
-                            <div>
-                                <label style="display: block; text-align: left; margin-bottom: 0.5rem; color: #d1d5db;">Passord</label>
-                                <input type="password" id="fallbackPassword" placeholder="Skriv inn passord" required style="width: 100%; padding: 0.75rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; box-sizing: border-box;">
-                            </div>
-                            <button type="submit" style="padding: 0.75rem; background: #3b82f6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: bold; margin-top: 1rem;">Logg inn</button>
-                        </form>
-                        <button onclick="showFallbackCompanySelection()" style="margin-top: 1rem; padding: 0.5rem; background: none; border: none; color: #9ca3af; cursor: pointer; text-decoration: underline;">← Tilbake til bedriftssøk</button>
-                    </div>
-                `;
-                
-            } catch (error) {
-                console.error('Error getting company data:', error);
+                // Search in Firestore companies collection
+                const companiesRef = db.collection('companies');
+                console.log('Querying companies collection...');
+                const snapshot = await companiesRef.get();
+                console.log('Found', snapshot.size, 'companies in Firestore');
+                                console.error('Error getting company data:', error);
                 alert('Feil ved henting av bedriftsdata');
             }
         }
@@ -158,23 +158,20 @@
             submitBtn.textContent = 'Logger inn...';
             
             try {
-                // Try to sign in with Firebase Auth
-                const userCredential = await auth.signInWithEmailAndPassword(email, password);
-                const user = userCredential.user;
+                console.log('Searching for companies with query:', query);
                 
-                console.log('Login successful:', user.email);
+                // Test Firestore connection first
+                const isConnected = await testFirestore();
+                if (!isConnected) {
+                    throw new Error('Firestore connection failed');
+                }
                 
-                // Hide fallback screen and show dashboard
-                document.getElementById('fallbackScreen').style.display = 'none';
-                document.getElementById('dashboard').style.display = 'block';
-                
-                // Set current user and load data
-                currentUser = user;
-                document.getElementById('currentUser').textContent = user.email;
-                loadAllData();
-                
-            } catch (error) {
-                console.error('Login error:', error);
+                // Search in Firestore companies collection
+                const companiesRef = db.collection('companies');
+                console.log('Querying companies collection...');
+                const snapshot = await companiesRef.get();
+                console.log('Found', snapshot.size, 'companies in Firestore');
+                                console.error('Login error:', error);
                 alert(`Innlogging feilet: ${error.message}`);
             } finally {
                 // Re-enable button
@@ -650,43 +647,20 @@
             `;
             
             try {
-                // Search in Firestore companies collection
-                const companiesRef = db.collection('companies');
-                const snapshot = await companiesRef.get();
+                console.log('Searching for companies with query:', query);
                 
-                const companies = [];
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    companies.push({
-                        id: doc.id,
-                        name: data.name || data.companyName || 'Ukjent navn',
-                        code: data.code || data.companyCode || doc.id
-                    });
-                });
-                
-                // Filter companies based on search query
-                const filteredCompanies = companies.filter(company => 
-                    company.name.toLowerCase().includes(query.toLowerCase()) || 
-                    company.code.toLowerCase().includes(query.toLowerCase())
-                );
-                
-                if (filteredCompanies.length === 0) {
-                    resultsContainer.innerHTML = `
-                        <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #9ca3af; text-align: center;">
-                            Ingen bedrifter funnet for "${query}"
-                        </div>
-                    `;
-                } else {
-                    resultsContainer.innerHTML = filteredCompanies.map(company => `
-                        <button onclick="selectFallbackCompany('${company.id}')" style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; cursor: pointer; text-align: left; transition: background 0.2s; hover:background: #4b5563;">
-                            <div style="font-weight: bold; margin-bottom: 0.25rem;">${company.name}</div>
-                            <div style="font-size: 0.875rem; color: #9ca3af;">${company.code}</div>
-                        </button>
-                    `).join(');
+                // Test Firestore connection first
+                const isConnected = await testFirestore();
+                if (!isConnected) {
+                    throw new Error('Firestore connection failed');
                 }
                 
-            } catch (error) {
-                console.error('Error searching companies:', error);
+                // Search in Firestore companies collection
+                const companiesRef = db.collection('companies');
+                console.log('Querying companies collection...');
+                const snapshot = await companiesRef.get();
+                console.log('Found', snapshot.size, 'companies in Firestore');
+                                console.error('Error searching companies:', error);
                 resultsContainer.innerHTML = `
                     <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #ef4444; text-align: center;">
                         Feil ved søk etter bedrifter. Prøv igjen.
@@ -701,38 +675,20 @@
             console.log('Company selected:', companyId);
             
             try {
-                // Get company data from Firestore
-                const companyDoc = await db.collection('companies').doc(companyId).get();
-                let companyName = companyId;
+                console.log('Searching for companies with query:', query);
                 
-                if (companyDoc.exists) {
-                    const data = companyDoc.data();
-                    companyName = data.name || data.companyName || companyId;
+                // Test Firestore connection first
+                const isConnected = await testFirestore();
+                if (!isConnected) {
+                    throw new Error('Firestore connection failed');
                 }
                 
-                // Update fallback screen to show login
-                const fallbackScreen = document.getElementById('fallbackScreen');
-                fallbackScreen.innerHTML = `
-                    <div style="text-align: center; color: white; background: #1f2937; padding: 2rem; border-radius: 0.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.5); max-width: 400px; width: 100%;">
-                        <h1 style="font-size: 2rem; margin-bottom: 0.5rem; color: #3b82f6;">DriftPro Admin</h1>
-                        <p style="margin-bottom: 2rem; color: #9ca3af;">Logg inn for <span style="color: #3b82f6;">${companyName}</span></p>
-                        <form onsubmit="handleFallbackLogin(event)" style="display: flex; flex-direction: column; gap: 1rem;">
-                            <div>
-                                <label style="display: block; text-align: left; margin-bottom: 0.5rem; color: #d1d5db;">E-post</label>
-                                <input type="email" id="fallbackEmail" placeholder="Skriv inn e-post" required style="width: 100%; padding: 0.75rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; box-sizing: border-box;">
-                            </div>
-                            <div>
-                                <label style="display: block; text-align: left; margin-bottom: 0.5rem; color: #d1d5db;">Passord</label>
-                                <input type="password" id="fallbackPassword" placeholder="Skriv inn passord" required style="width: 100%; padding: 0.75rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; box-sizing: border-box;">
-                            </div>
-                            <button type="submit" style="padding: 0.75rem; background: #3b82f6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: bold; margin-top: 1rem;">Logg inn</button>
-                        </form>
-                        <button onclick="showFallbackCompanySelection()" style="margin-top: 1rem; padding: 0.5rem; background: none; border: none; color: #9ca3af; cursor: pointer; text-decoration: underline;">← Tilbake til bedriftssøk</button>
-                    </div>
-                `;
-                
-            } catch (error) {
-                console.error('Error getting company data:', error);
+                // Search in Firestore companies collection
+                const companiesRef = db.collection('companies');
+                console.log('Querying companies collection...');
+                const snapshot = await companiesRef.get();
+                console.log('Found', snapshot.size, 'companies in Firestore');
+                                console.error('Error getting company data:', error);
                 alert('Feil ved henting av bedriftsdata');
             }
         }
@@ -771,23 +727,20 @@
             submitBtn.textContent = 'Logger inn...';
             
             try {
-                // Try to sign in with Firebase Auth
-                const userCredential = await auth.signInWithEmailAndPassword(email, password);
-                const user = userCredential.user;
+                console.log('Searching for companies with query:', query);
                 
-                console.log('Login successful:', user.email);
+                // Test Firestore connection first
+                const isConnected = await testFirestore();
+                if (!isConnected) {
+                    throw new Error('Firestore connection failed');
+                }
                 
-                // Hide fallback screen and show dashboard
-                document.getElementById('fallbackScreen').style.display = 'none';
-                document.getElementById('dashboard').style.display = 'block';
-                
-                // Set current user and load data
-                currentUser = user;
-                document.getElementById('currentUser').textContent = user.email;
-                loadAllData();
-                
-            } catch (error) {
-                console.error('Login error:', error);
+                // Search in Firestore companies collection
+                const companiesRef = db.collection('companies');
+                console.log('Querying companies collection...');
+                const snapshot = await companiesRef.get();
+                console.log('Found', snapshot.size, 'companies in Firestore');
+                                console.error('Login error:', error);
                 alert(`Innlogging feilet: ${error.message}`);
             } finally {
                 // Re-enable button
