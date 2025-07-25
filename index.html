@@ -18,45 +18,14 @@
         </div>
     </div>
 
-    <!-- Company Selection Screen -->
-    <div id="companyScreen" class="min-h-screen flex items-center justify-center">
-        <div class="bg-gray-800 p-8 rounded-lg shadow-lg max-w-md w-full">
-            <h1 class="text-3xl font-bold text-center mb-6">DriftPro Admin</h1>
-            <p class="text-gray-400 text-center mb-6">Velg bedrift for å fortsette</p>
-            
-            <div class="space-y-4">
-                <div class="bg-gray-700 p-4 rounded-lg hover:bg-gray-600 transition-colors cursor-pointer" onclick="selectCompany('driftpro-main')">
-                    <h3 class="font-semibold text-lg">DriftPro Hovedkontor</h3>
-                    <p class="text-gray-400 text-sm">Hovedadministrasjon og systemkontroll</p>
-                </div>
-                
-                <div class="bg-gray-700 p-4 rounded-lg hover:bg-gray-600 transition-colors cursor-pointer" onclick="selectCompany('driftpro-nord')">
-                    <h3 class="font-semibold text-lg">DriftPro Nord</h3>
-                    <p class="text-gray-400 text-sm">Nordisk region og avdelinger</p>
-                </div>
-                
-                <div class="bg-gray-700 p-4 rounded-lg hover:bg-gray-600 transition-colors cursor-pointer" onclick="selectCompany('driftpro-vest')">
-                    <h3 class="font-semibold text-lg">DriftPro Vest</h3>
-                    <p class="text-gray-400 text-sm">Vestlandet og kystregioner</p>
-                </div>
-                
-                <div class="bg-gray-700 p-4 rounded-lg hover:bg-gray-600 transition-colors cursor-pointer" onclick="selectCompany('driftpro-ost')">
-                    <h3 class="font-semibold text-lg">DriftPro Øst</h3>
-                    <p class="text-gray-400 text-sm">Østlandet og hovedstadsregionen</p>
-                </div>
-            </div>
-        </div>
-    </div>
+
 
     <!-- Login Screen -->
-    <div id="loginScreen" class="min-h-screen flex items-center justify-center hidden">
+    <div id="loginScreen" class="min-h-screen flex items-center justify-center">
         <div class="bg-gray-800 p-8 rounded-lg shadow-lg max-w-md w-full">
             <div class="text-center mb-6">
                 <h1 class="text-3xl font-bold">DriftPro Admin</h1>
-                <p class="text-gray-400 mt-2" id="selectedCompanyName">Velg bedrift</p>
-                <button onclick="backToCompanySelection()" class="text-blue-400 hover:text-blue-300 text-sm mt-2">
-                    ← Velg annen bedrift
-                </button>
+                <p class="text-gray-400 mt-2">Logg inn for å administrere systemet</p>
             </div>
             
             <form id="loginForm" class="space-y-4">
@@ -76,19 +45,6 @@
             </form>
             
             <div id="loginError" class="mt-4 text-red-400 text-center hidden"></div>
-            
-            <!-- Demo Login Buttons -->
-            <div class="mt-6 pt-6 border-t border-gray-700">
-                <p class="text-gray-400 text-center mb-4">Demo tilgang:</p>
-                <div class="grid grid-cols-2 gap-2">
-                    <button onclick="demoLogin('admin')" class="bg-green-600 hover:bg-green-700 p-2 rounded text-sm">
-                        Admin
-                    </button>
-                    <button onclick="demoLogin('manager')" class="bg-blue-600 hover:bg-blue-700 p-2 rounded text-sm">
-                        Manager
-                    </button>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -103,6 +59,12 @@
                         <p class="text-gray-400" id="userInfo">Innlogget som: <span id="currentUser"></span></p>
                     </div>
                     <div class="flex items-center space-x-4">
+                        <!-- Company Selector -->
+                        <div class="relative">
+                            <select id="companySelector" onchange="changeCompany()" class="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white">
+                                <option value="">Velg bedrift...</option>
+                            </select>
+                        </div>
                         <span class="text-green-400">● Online</span>
                         <button onclick="logout()" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg">
                             Logg ut
@@ -382,9 +344,24 @@
     </div>
 
     <script>
-        // Firebase configuration - Demo mode without real Firebase
-        let selectedCompany = null;
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+            authDomain: "driftpro-xxxxx.firebaseapp.com",
+            projectId: "driftpro-xxxxx",
+            storageBucket: "driftpro-xxxxx.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef123456"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
         let currentUser = null;
+        let selectedCompany = null;
+        let companies = [];
         let users = [];
         let departments = [];
         let chats = [];
@@ -392,79 +369,25 @@
         let documents = [];
         let shifts = [];
 
-        // Demo data
-        const demoData = {
-            users: [
-                { id: '1', firstName: 'Ola', lastName: 'Nordmann', email: 'ola@driftpro.no', role: 'admin', department: 'IT', isActive: true },
-                { id: '2', firstName: 'Kari', lastName: 'Hansen', email: 'kari@driftpro.no', role: 'manager', department: 'HR', isActive: true },
-                { id: '3', firstName: 'Per', lastName: 'Olsen', email: 'per@driftpro.no', role: 'employee', department: 'Produksjon', isActive: true },
-                { id: '4', firstName: 'Anne', lastName: 'Berg', email: 'anne@driftpro.no', role: 'manager', department: 'Salg', isActive: true },
-                { id: '5', firstName: 'Erik', lastName: 'Sørensen', email: 'erik@driftpro.no', role: 'employee', department: 'Logistikk', isActive: true }
-            ],
-            departments: [
-                { id: '1', name: 'IT', manager: 'Ola Nordmann', users: 3 },
-                { id: '2', name: 'HR', manager: 'Kari Hansen', users: 2 },
-                { id: '3', name: 'Produksjon', manager: 'Per Olsen', users: 8 },
-                { id: '4', name: 'Salg', manager: 'Anne Berg', users: 5 },
-                { id: '5', name: 'Logistikk', manager: 'Erik Sørensen', users: 4 }
-            ],
-            chats: [
-                { id: '1', type: 'direct', name: 'Direkte meldinger', count: 12 },
-                { id: '2', type: 'group', name: 'Generell chat', count: 45 },
-                { id: '3', type: 'group', name: 'IT-support', count: 8 },
-                { id: '4', type: 'direct', name: 'Managers', count: 6 }
-            ],
-            deviations: [
-                { id: '1', description: 'Maskinfeil på produksjonslinje A', reportedBy: 'Per Olsen', priority: 'Høy', status: 'Åpen' },
-                { id: '2', description: 'Sikkerhetsproblem i lager', reportedBy: 'Erik Sørensen', priority: 'Kritisk', status: 'Åpen' },
-                { id: '3', description: 'IT-system nede', reportedBy: 'Ola Nordmann', priority: 'Høy', status: 'Løst' },
-                { id: '4', description: 'Ventilasjon ikke fungerer', reportedBy: 'Kari Hansen', priority: 'Medium', status: 'Åpen' }
-            ],
-            documents: [
-                { id: '1', name: 'Sikkerhetsmanual.pdf', uploadedBy: 'Ola Nordmann', size: '2.3 MB', downloads: 15 },
-                { id: '2', name: 'Produksjonsplan.xlsx', uploadedBy: 'Per Olsen', size: '1.8 MB', downloads: 8 },
-                { id: '3', name: 'HR-retningslinjer.docx', uploadedBy: 'Kari Hansen', size: '3.1 MB', downloads: 12 },
-                { id: '4', name: 'Vedlikeholdsplan.pdf', uploadedBy: 'Erik Sørensen', size: '4.2 MB', downloads: 6 }
-            ],
-            shifts: [
-                { id: '1', date: '2024-07-24', userName: 'Per Olsen', startTime: '08:00', endTime: '16:00', status: 'Aktiv' },
-                { id: '2', date: '2024-07-24', userName: 'Erik Sørensen', startTime: '16:00', endTime: '00:00', status: 'Aktiv' },
-                { id: '3', date: '2024-07-25', userName: 'Anne Berg', startTime: '09:00', endTime: '17:00', status: 'Planlagt' },
-                { id: '4', date: '2024-07-25', userName: 'Kari Hansen', startTime: '08:00', endTime: '16:00', status: 'Planlagt' }
-            ]
-        };
-
         // Initialize app
         document.addEventListener('DOMContentLoaded', function() {
-            showCompanySelection();
+            checkAuthState();
         });
 
-        function showCompanySelection() {
-            document.getElementById('loadingScreen').classList.add('hidden');
-            document.getElementById('companyScreen').classList.remove('hidden');
-            document.getElementById('loginScreen').classList.add('hidden');
-            document.getElementById('dashboard').classList.add('hidden');
-        }
-
-        function selectCompany(companyId) {
-            selectedCompany = companyId;
-            const companyNames = {
-                'driftpro-main': 'DriftPro Hovedkontor',
-                'driftpro-nord': 'DriftPro Nord',
-                'driftpro-vest': 'DriftPro Vest',
-                'driftpro-ost': 'DriftPro Øst'
-            };
-            document.getElementById('selectedCompanyName').textContent = companyNames[companyId];
-            showLogin();
-        }
-
-        function backToCompanySelection() {
-            showCompanySelection();
+        function checkAuthState() {
+            auth.onAuthStateChanged(function(user) {
+                if (user) {
+                    currentUser = user;
+                    showDashboard();
+                    loadAllData();
+                } else {
+                    showLogin();
+                }
+            });
         }
 
         function showLogin() {
             document.getElementById('loadingScreen').classList.add('hidden');
-            document.getElementById('companyScreen').classList.add('hidden');
             document.getElementById('loginScreen').classList.remove('hidden');
             document.getElementById('dashboard').classList.add('hidden');
         }
@@ -482,70 +405,103 @@
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             
-            // Demo login - accept any email/password
-            if (email && password) {
-                currentUser = { email: email, role: 'admin' };
-                showDashboard();
-                loadAllData();
-            } else {
-                document.getElementById('loginError').textContent = 'Vennligst fyll ut alle felter';
-                document.getElementById('loginError').classList.remove('hidden');
-            }
+            auth.signInWithEmailAndPassword(email, password)
+                .catch(function(error) {
+                    document.getElementById('loginError').textContent = error.message;
+                    document.getElementById('loginError').classList.remove('hidden');
+                });
         });
 
-        function demoLogin(role) {
-            currentUser = { 
-                email: role === 'admin' ? 'admin@driftpro.no' : 'manager@driftpro.no', 
-                role: role 
-            };
-            showDashboard();
-            loadAllData();
-        }
-
         function logout() {
-            currentUser = null;
-            showCompanySelection();
+            auth.signOut();
         }
 
-        // Load all data from demo data
-        function loadAllData() {
-            loadUsers();
-            loadDepartments();
-            loadChats();
-            loadDeviations();
-            loadDocuments();
-            loadShifts();
-            updateStatistics();
+        // Load all data from Firestore
+        async function loadAllData() {
+            try {
+                await Promise.all([
+                    loadCompanies(),
+                    loadUsers(),
+                    loadDepartments(),
+                    loadChats(),
+                    loadDeviations(),
+                    loadDocuments(),
+                    loadShifts()
+                ]);
+                updateStatistics();
+            } catch (error) {
+                console.error('Error loading data:', error);
+            }
         }
 
-        function loadUsers() {
-            users = demoData.users;
+        async function loadCompanies() {
+            const snapshot = await db.collection('companies').get();
+            companies = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            updateCompanySelector();
+        }
+
+        function updateCompanySelector() {
+            const selector = document.getElementById('companySelector');
+            selector.innerHTML = '<option value="">Velg bedrift...</option>';
+            
+            companies.forEach(company => {
+                const option = document.createElement('option');
+                option.value = company.id;
+                option.textContent = company.name;
+                selector.appendChild(option);
+            });
+        }
+
+        function changeCompany() {
+            const selector = document.getElementById('companySelector');
+            selectedCompany = selector.value;
+            
+            if (selectedCompany) {
+                // Reload data for selected company
+                loadAllData();
+            }
+        }
+
+        async function loadUsers() {
+            if (!selectedCompany) return;
+            const snapshot = await db.collection('users').where('companyId', '==', selectedCompany).get();
+            users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             displayUsers();
         }
 
-        function loadDepartments() {
-            departments = demoData.departments;
+        async function loadDepartments() {
+            if (!selectedCompany) return;
+            const snapshot = await db.collection('departments').where('companyId', '==', selectedCompany).get();
+            departments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             displayDepartments();
             updateDepartmentFilters();
         }
 
-        function loadChats() {
-            chats = demoData.chats;
+        async function loadChats() {
+            if (!selectedCompany) return;
+            const snapshot = await db.collection('chats').where('companyId', '==', selectedCompany).get();
+            chats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             displayChats();
         }
 
-        function loadDeviations() {
-            deviations = demoData.deviations;
+        async function loadDeviations() {
+            if (!selectedCompany) return;
+            const snapshot = await db.collection('deviations').where('companyId', '==', selectedCompany).get();
+            deviations = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             displayDeviations();
         }
 
-        function loadDocuments() {
-            documents = demoData.documents;
+        async function loadDocuments() {
+            if (!selectedCompany) return;
+            const snapshot = await db.collection('documents').where('companyId', '==', selectedCompany).get();
+            documents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             displayDocuments();
         }
 
-        function loadShifts() {
-            shifts = demoData.shifts;
+        async function loadShifts() {
+            if (!selectedCompany) return;
+            const snapshot = await db.collection('shifts').where('companyId', '==', selectedCompany).get();
+            shifts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             displayShifts();
         }
 
@@ -715,23 +671,28 @@
         }
 
         // Add user form
-        document.getElementById('addUserForm').addEventListener('submit', function(e) {
+        document.getElementById('addUserForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const userData = {
-                id: (users.length + 1).toString(),
                 firstName: document.getElementById('firstName').value,
                 lastName: document.getElementById('lastName').value,
                 email: document.getElementById('userEmail').value,
                 role: document.getElementById('userRole').value,
                 department: document.getElementById('userDepartment').value,
+                companyId: selectedCompany,
+                createdAt: new Date(),
                 isActive: true
             };
 
-            users.push(userData);
-            hideAddUserModal();
-            loadUsers();
-            updateStatistics();
+            try {
+                await db.collection('users').add(userData);
+                hideAddUserModal();
+                loadUsers();
+                updateStatistics();
+            } catch (error) {
+                console.error('Error adding user:', error);
+            }
         });
 
         // Placeholder functions for other actions
