@@ -1,62 +1,155 @@
-# DriftPro Admin Panel
+# DriftPro Admin - Automatisk E-post System
 
-Komplett web admin panel for DriftPro med Firebase-integrasjon og ekte data.
+## 🚀 Automatisk E-post Funksjonalitet
 
-## 🚀 Funksjoner
+Dette systemet sender automatisk e-post til admin-brukere når en ny bedrift opprettes i DriftPro Admin panelet.
 
-- **👥 Brukeradministrasjon**: Opprett, rediger og slett brukere
-- **🏢 Avdelinger**: Administrer avdelinger og tildel managere
-- **💬 Chat-oversikt**: Se alle chat-rom og meldinger
-- **⚠️ Avvik-administrasjon**: Administrer avvik og rapporter
-- **📄 Dokumenter**: Se alle dokumenter i systemet
-- **📅 Skiftplan**: Administrer skiftplan og tider
-- **📊 Live statistikk**: Sanntids oversikt over systemet
+## 📧 Oppsett av E-post System
 
-## 🔥 Firebase-integrasjon
+### 1. Installer Firebase CLI
+```bash
+npm install -g firebase-tools
+```
 
-Admin panelet kobler direkte til Firestore for å:
-- Lese ekte brukerdata
-- Administrere avdelinger
-- Se chat-historikk
-- Håndtere avvik
-- Administrere dokumenter
-- Styre skiftplan
+### 2. Logg inn på Firebase
+```bash
+firebase login
+```
 
-## 🛠️ Teknisk
+### 3. Initialiser Firebase Functions
+```bash
+firebase init functions
+```
 
-- **Frontend**: HTML5, Tailwind CSS, JavaScript
-- **Backend**: Firebase Firestore
-- **Autentisering**: Firebase Auth
-- **Deployment**: Netlify
+### 4. Konfigurer E-post Innstillinger
+```bash
+firebase functions:config:set email.user="din-email@gmail.com"
+firebase functions:config:set email.pass="din-app-passord"
+```
 
-## 📱 Kompatibilitet
+**Viktig:** Bruk en Gmail App Password, ikke vanlig passord!
 
-- ✅ Web (Chrome, Firefox, Safari, Edge)
-- ✅ Mobil (responsive design)
-- ✅ Tablet (responsive design)
+### 5. Installer Dependencies
+```bash
+cd functions
+npm install
+```
 
-## 🔧 Installasjon
+### 6. Deploy Functions
+```bash
+firebase deploy --only functions
+```
 
-1. Klon repositoryet
-2. Oppdater Firebase-konfigurasjon i `index.html`
-3. Deploy til Netlify
+## 🔧 Gmail App Password Oppsett
 
-## 🔐 Sikkerhet
+### 1. Aktiver 2-Faktor Autentisering
+- Gå til Google Account Settings
+- Aktiver 2-Step Verification
 
-- Firebase Authentication
-- Rollebasert tilgang
-- Sikker Firestore-regler
+### 2. Opprett App Password
+- Gå til Security > App passwords
+- Velg "Mail" og "Other (Custom name)"
+- Skriv "DriftPro Admin"
+- Kopier det genererte passordet
 
-## 📊 Statistikk
+### 3. Bruk App Password
+```bash
+firebase functions:config:set email.pass="generert-app-passord"
+```
 
-Admin panelet viser sanntids statistikk:
-- Antall aktive brukere
-- Antall avdelinger
-- Antall chat-rom
-- Antall åpne avvik
-- Antall dokumenter
-- Antall aktive skift
+## 📨 E-post Template
 
----
+E-posten som sendes inneholder:
+- ✅ **Velkomstmelding** - Personlig hilsen til admin
+- ✅ **Bedriftsinformasjon** - Navn på bedriften
+- ✅ **Invitasjonslenke** - Direkte link til passordoppsett
+- ✅ **Instruksjoner** - Hvordan sette opp passord
+- ✅ **Funksjoner** - Hva admin kan gjøre
+- ✅ **Sikkerhet** - Informasjon om lenkens gyldighet
 
-**DriftPro Admin Panel** - Komplett kontroll over DriftPro-systemet! 🚀 
+## 🔄 Automatisk Flyt
+
+### Når bedrift opprettes:
+1. **DriftPro Admin** oppretter bedrift med admin-detaljer
+2. **Cloud Function** triggeres automatisk
+3. **E-post sendes** til admin-brukeren
+4. **Admin får lenke** til passordoppsett
+5. **Admin setter opp passord** og logger inn
+
+### E-post inneholder:
+- 🎨 **Moderne design** - Samme stil som resten av systemet
+- 📱 **Responsiv** - Fungerer på alle enheter
+- 🔗 **Direkte lenke** - Klikk for å sette opp passord
+- ⏰ **Tidsbegrensning** - Lenke utløper om 24 timer
+
+## 🛠️ Feilhåndtering
+
+Systemet håndterer:
+- ✅ **E-post feil** - Logger feil og oppdaterer status
+- ✅ **Nettverksproblemer** - Retry-logikk
+- ✅ **Ugyldige e-poster** - Validering før sending
+- ✅ **Status tracking** - Sporer om e-post ble sendt
+
+## 📊 Status Tracking
+
+Hver invitasjon sporer:
+- ✅ **emailSent** - Om e-post ble sendt
+- ✅ **emailSentAt** - Når e-post ble sendt
+- ✅ **emailError** - Feilmelding hvis sending feilet
+- ✅ **emailErrorAt** - Når feilen oppsto
+
+## 🔒 Sikkerhet
+
+- ✅ **App Password** - Sikker e-post autentisering
+- ✅ **Tidsbegrenset lenke** - Utløper om 24 timer
+- ✅ **Enkelt bruk** - Lenke kan kun brukes én gang
+- ✅ **Validering** - Sjekker at invitasjonen er gyldig
+
+## 🚀 Deployment
+
+```bash
+# Deploy alt
+firebase deploy
+
+# Deploy kun functions
+firebase deploy --only functions
+
+# Deploy kun hosting
+firebase deploy --only hosting
+```
+
+## 📝 Logs
+
+Se e-post sending logs:
+```bash
+firebase functions:log --only sendInvitationEmail
+```
+
+## 🎯 Test
+
+1. **Opprett bedrift** i DriftPro Admin
+2. **Sjekk e-post** til admin-brukeren
+3. **Klikk på lenken** i e-posten
+4. **Sett opp passord** på setup-password.html
+5. **Logger inn** med nytt passord
+
+## 🔧 Troubleshooting
+
+### E-post sendes ikke:
+1. Sjekk Firebase Functions logs
+2. Verifiser e-post konfigurasjon
+3. Sjekk at App Password er riktig
+4. Verifiser at 2FA er aktivert
+
+### Lenke fungerer ikke:
+1. Sjekk at invitasjonen eksisterer i Firestore
+2. Verifiser at lenken ikke har utløpt
+3. Sjekk at lenken ikke allerede er brukt
+
+## 📞 Support
+
+Hvis du har problemer:
+1. Sjekk Firebase Console logs
+2. Verifiser alle konfigurasjoner
+3. Test med en enkel e-post først
+4. Sjekk at alle dependencies er installert
