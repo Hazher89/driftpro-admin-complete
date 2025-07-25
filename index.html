@@ -24,58 +24,31 @@
         const db = firebase.firestore();
         const auth = firebase.auth();
 
-        console.log('Firebase initialized successfully');
-        console.log('Firebase config:', firebaseConfig);
-        console.log('Firestore instance:', db);
-        console.log('Auth instance:', auth);
-
-        // Check if user is already logged in
-        auth.onAuthStateChanged(function(user) {
-            console.log('Auth state changed:', user);
+        // Check authentication state immediately
+        auth.onAuthStateChanged(user => {
             if (user) {
-                // User is already logged in, show dashboard directly
-                console.log('User already logged in, showing dashboard');
-                document.getElementById('userName').textContent = user.email;
-                loadDashboardStats();
-                showDashboard();
+                // User is logged in, show dashboard
+                showDashboard(user);
             } else {
-                // No user logged in, show company search
-                console.log('No user logged in, showing company search');
-                testFirestore();
-                createTestCompanies();
+                // No user, show company search
                 showCompanySearch();
             }
         });
 
-        // Add timeout to prevent infinite loading
-        setTimeout(function() {
+        // Fallback to company search after 5 seconds
+        setTimeout(() => {
             if (document.getElementById('loadingScreen').style.display !== 'none') {
-                console.log('Loading timeout reached, showing company search');
                 showCompanySearch();
             }
         }, 5000);
 
-        // Function to handle login
-        async function handleLogin(email, password) {
-            try {
-                const userCredential = await auth.signInWithEmailAndPassword(email, password);
-                const user = userCredential.user;
-                console.log('User logged in:', user.email);
-                
-                // Check if user needs to change password
-                if (user.email === email && password === 'temp123') {
-                    alert('Du må endre passordet ditt ved første innlogging!');
-                    // Here you would typically redirect to a password change page
-                }
-                
-                showDashboard();
-            } catch (error) {
-                console.error('Login error:', error);
-                alert('Innlogging feilet: ' + error.message);
-            }
+        function showLoadingScreen() {
+            document.getElementById('loadingScreen').style.display = 'flex';
+            document.getElementById('companySearchScreen').style.display = 'none';
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('dashboardScreen').style.display = 'none';
         }
 
-        // Function to show company search screen
         function showCompanySearch() {
             document.getElementById('loadingScreen').style.display = 'none';
             document.getElementById('companySearchScreen').style.display = 'flex';
@@ -83,166 +56,155 @@
             document.getElementById('dashboardScreen').style.display = 'none';
         }
 
-        // Function to show login screen
-        function showLogin() {
+        function showLoginScreen() {
             document.getElementById('loadingScreen').style.display = 'none';
             document.getElementById('companySearchScreen').style.display = 'none';
             document.getElementById('loginScreen').style.display = 'flex';
             document.getElementById('dashboardScreen').style.display = 'none';
         }
 
-        // Function to show dashboard
-        function showDashboard() {
+        function showDashboard(user) {
             document.getElementById('loadingScreen').style.display = 'none';
             document.getElementById('companySearchScreen').style.display = 'none';
             document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('dashboardScreen').style.display = 'block';
+            document.getElementById('dashboardScreen').style.display = 'flex';
+            
+            document.getElementById('userName').textContent = user.email;
+            loadAllFirestoreData();
         }
 
-        // Function to search companies
-        async function searchCompanies(query) {
-            if (query.length < 2) {
-                document.getElementById('companySearchResults').innerHTML = '';
-                return;
-            }
-
+        async function searchCompanies() {
+            const searchTerm = document.getElementById('companySearch').value.toLowerCase();
+            const companiesContainer = document.getElementById('companiesContainer');
+            
             try {
-                const snapshot = await db.collection('companies').where('name', '>=', query).where('name', '<=', query + '\uf8ff').get();
-                const results = [];
+                const snapshot = await db.collection('companies').get();
+                const companies = [];
                 snapshot.forEach(doc => {
-                    results.push({ id: doc.id, ...doc.data() });
+                    const company = { id: doc.id, ...doc.data() };
+                    if (company.name && company.name.toLowerCase().includes(searchTerm)) {
+                        companies.push(company);
+                    }
                 });
-
-                const resultsDiv = document.getElementById('companySearchResults');
-                if (results.length === 0) {
-                    resultsDiv.innerHTML = '<p class="text-gray-400 mt-2">Ingen bedrifter funnet</p>';
+                
+                if (companies.length === 0) {
+                    companiesContainer.innerHTML = `
+                        <div class="text-center py-16">
+                            <div class="w-24 h-24 bg-gradient-to-br from-red-500/20 to-red-600/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <svg class="w-12 h-12 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                </svg>
+                            </div>
+                            <h3 class="text-2xl font-bold text-white mb-2">Ingen bedrifter funnet</h3>
+                            <p class="text-gray-400">Prøv å søke med et annet navn</p>
+                        </div>
+                    `;
                 } else {
-                    resultsDiv.innerHTML = results.map(company => `
-                        <div class="bg-gray-800 p-4 rounded-lg mt-2 cursor-pointer hover:bg-gray-700" onclick="selectCompany('${company.id}', '${company.name}')">
-                            <h3 class="text-lg font-semibold">${company.name}</h3>
-                            <p class="text-gray-400">${company.description || 'Ingen beskrivelse'}</p>
+                    companiesContainer.innerHTML = companies.map(company => `
+                        <div class="neo-card rounded-3xl p-8 hover:scale-105 transition-all duration-500 cursor-pointer group" onclick="selectCompany('${company.id}')">
+                            <div class="flex items-center justify-between mb-6">
+                                <div class="w-16 h-16 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-2xl flex items-center justify-center shadow-2xl group-hover:rotate-12 transition-transform duration-500">
+                                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                                    </svg>
+                                </div>
+                                <div class="text-right">
+                                    <span class="px-4 py-2 bg-gradient-to-r from-green-500/20 to-green-600/20 border border-green-500/30 rounded-full text-sm font-medium text-green-300">
+                                        Aktiv
+                                    </span>
+                                </div>
+                            </div>
+                            <h3 class="text-2xl font-bold text-white mb-3 group-hover:text-cyan-300 transition-colors duration-300">
+                                ${company.name || 'Ukjent bedrift'}
+                            </h3>
+                            <p class="text-gray-300 mb-4">
+                                ${company.description || 'Ingen beskrivelse tilgjengelig'}
+                            </p>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-400">ID: ${company.id}</span>
+                                <div class="flex items-center space-x-2">
+                                    <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                                    <span class="text-sm text-green-400">Online</span>
+                                </div>
+                            </div>
                         </div>
                     `).join('');
                 }
             } catch (error) {
                 console.error('Error searching companies:', error);
-                document.getElementById('companySearchResults').innerHTML = '<p class="text-red-400 mt-2">Feil ved søk: ' + error.message + '</p>';
+                companiesContainer.innerHTML = '<p class="text-red-400">Feil ved søk: ' + error.message + '</p>';
             }
         }
 
-        // Function to select company
-        function selectCompany(companyId, companyName) {
+        function selectCompany(companyId) {
             localStorage.setItem('selectedCompanyId', companyId);
-            localStorage.setItem('selectedCompanyName', companyName);
-            console.log('Selected company:', companyId, companyName);
-            showLogin();
+            showLoginScreen();
         }
 
-        // Function to test Firestore connection
-        async function testFirestore() {
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            if (!email || !password) {
+                alert('Vennligst fyll ut både e-post og passord');
+                return;
+            }
+            
             try {
-                const snapshot = await db.collection('companies').limit(1).get();
-                console.log('Firestore connection test successful, found', snapshot.size, 'companies');
+                const userCredential = await auth.signInWithEmailAndPassword(email, password);
+                localStorage.setItem('currentUser', JSON.stringify(userCredential.user));
+                showDashboard(userCredential.user);
             } catch (error) {
-                console.error('Firestore connection test failed:', error);
+                alert('Innlogging feilet: ' + error.message);
             }
         }
 
-        // Function to create test companies
-        async function createTestCompanies() {
-            try {
-                const snapshot = await db.collection('companies').get();
-                if (snapshot.empty) {
-                    console.log('Creating test companies...');
-                    await db.collection('companies').add({
-                        name: 'DriftPro AS',
-                        description: 'Hovedkontor',
-                        companyId: 'driftpro-40ccd'
-                    });
-                    await db.collection('companies').add({
-                        name: 'DriftPro Nord',
-                        description: 'Nordisk avdeling',
-                        companyId: 'driftpro-nord'
-                    });
-                    console.log('Test companies created');
-                }
-            } catch (error) {
-                console.error('Error creating test companies:', error);
-            }
-        }
-
-        // Function to load dashboard stats
-        async function loadDashboardStats() {
-            try {
-                console.log('Loading all Firestore data...');
-                await loadAllFirestoreData();
-            } catch (error) {
-                console.error('Error loading dashboard stats:', error);
-            }
-        }
-
-        // Function to load all Firestore data
         async function loadAllFirestoreData() {
             try {
                 console.log('Loading all Firestore data...');
                 
-                // Load companies
                 const companiesSnapshot = await db.collection('companies').get();
                 const companies = [];
                 companiesSnapshot.forEach(doc => {
                     companies.push({ id: doc.id, ...doc.data() });
                 });
-                console.log('Companies:', companies);
                 
-                // Load departments
                 const departmentsSnapshot = await db.collection('departments').get();
                 const departments = [];
                 departmentsSnapshot.forEach(doc => {
                     departments.push({ id: doc.id, ...doc.data() });
                 });
-                console.log('Departments:', departments);
                 
-                // Load employees
                 const employeesSnapshot = await db.collection('users').get();
                 const employees = [];
                 employeesSnapshot.forEach(doc => {
                     employees.push({ id: doc.id, ...doc.data() });
                 });
-                console.log('Employees:', employees);
                 
-                // Load deviations
                 const deviationsSnapshot = await db.collection('deviations').get();
                 const deviations = [];
                 deviationsSnapshot.forEach(doc => {
                     deviations.push({ id: doc.id, ...doc.data() });
                 });
-                console.log('Deviations:', deviations);
                 
-                // Load shifts
                 const shiftsSnapshot = await db.collection('shifts').get();
                 const shifts = [];
                 shiftsSnapshot.forEach(doc => {
                     shifts.push({ id: doc.id, ...doc.data() });
                 });
-                console.log('Shifts:', shifts);
                 
-                // Load chat messages
                 const chatSnapshot = await db.collection('chat').get();
                 const chatMessages = [];
                 chatSnapshot.forEach(doc => {
                     chatMessages.push({ id: doc.id, ...doc.data() });
                 });
-                console.log('Chat messages:', chatMessages);
                 
-                // Load documents
                 const documentsSnapshot = await db.collection('documents').get();
                 const documents = [];
                 documentsSnapshot.forEach(doc => {
                     documents.push({ id: doc.id, ...doc.data() });
                 });
-                console.log('Documents:', documents);
                 
-                // Update dashboard with all data
                 updateDashboardWithData({
                     companies,
                     departments,
@@ -258,416 +220,400 @@
             }
         }
 
-        // Function to update dashboard with all data
         function updateDashboardWithData(data) {
             const statsContainer = document.getElementById('dashboardStats');
             if (!statsContainer) return;
             
             statsContainer.innerHTML = `
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <div class="bg-white rounded-lg shadow p-6">
-                        <div class="flex items-center">
-                            <div class="p-3 rounded-full bg-blue-100 text-blue-600">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+                    <div class="neo-card rounded-3xl p-8 hover:scale-105 transition-all duration-500 group">
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="w-16 h-16 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-2xl flex items-center justify-center shadow-2xl group-hover:rotate-12 transition-transform duration-500">
+                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                                 </svg>
                             </div>
-                            <div class="ml-4">
-                                <p class="text-sm font-medium text-gray-600">Bedrifter</p>
-                                <p class="text-2xl font-semibold text-gray-900">${data.companies.length}</p>
+                            <div class="text-right">
+                                <span class="px-4 py-2 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 rounded-full text-sm font-medium text-cyan-300">
+                                    ${data.companies.length}
+                                </span>
                             </div>
                         </div>
+                        <h3 class="text-2xl font-bold text-white mb-2">Bedrifter</h3>
+                        <p class="text-gray-300">Totalt antall registrerte bedrifter</p>
                     </div>
                     
-                    <div class="bg-white rounded-lg shadow p-6">
-                        <div class="flex items-center">
-                            <div class="p-3 rounded-full bg-green-100 text-green-600">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="neo-card rounded-3xl p-8 hover:scale-105 transition-all duration-500 group">
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="w-16 h-16 bg-gradient-to-br from-emerald-400 to-green-500 rounded-2xl flex items-center justify-center shadow-2xl group-hover:rotate-12 transition-transform duration-500">
+                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
                                 </svg>
                             </div>
-                            <div class="ml-4">
-                                <p class="text-sm font-medium text-gray-600">Ansatte</p>
-                                <p class="text-2xl font-semibold text-gray-900">${data.employees.length}</p>
+                            <div class="text-right">
+                                <span class="px-4 py-2 bg-gradient-to-r from-emerald-500/20 to-green-500/20 border border-emerald-500/30 rounded-full text-sm font-medium text-emerald-300">
+                                    ${data.employees.length}
+                                </span>
                             </div>
                         </div>
+                        <h3 class="text-2xl font-bold text-white mb-2">Ansatte</h3>
+                        <p class="text-gray-300">Aktive ansatte i systemet</p>
                     </div>
                     
-                    <div class="bg-white rounded-lg shadow p-6">
-                        <div class="flex items-center">
-                            <div class="p-3 rounded-full bg-purple-100 text-purple-600">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="neo-card rounded-3xl p-8 hover:scale-105 transition-all duration-500 group">
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="w-16 h-16 bg-gradient-to-br from-violet-400 to-purple-500 rounded-2xl flex items-center justify-center shadow-2xl group-hover:rotate-12 transition-transform duration-500">
+                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
                                 </svg>
                             </div>
-                            <div class="ml-4">
-                                <p class="text-sm font-medium text-gray-600">Avdelinger</p>
-                                <p class="text-2xl font-semibold text-gray-900">${data.departments.length}</p>
+                            <div class="text-right">
+                                <span class="px-4 py-2 bg-gradient-to-r from-violet-500/20 to-purple-500/20 border border-violet-500/30 rounded-full text-sm font-medium text-violet-300">
+                                    ${data.departments.length}
+                                </span>
                             </div>
                         </div>
+                        <h3 class="text-2xl font-bold text-white mb-2">Avdelinger</h3>
+                        <p class="text-gray-300">Organiserte avdelinger</p>
                     </div>
                     
-                    <div class="bg-white rounded-lg shadow p-6">
-                        <div class="flex items-center">
-                            <div class="p-3 rounded-full bg-red-100 text-red-600">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="neo-card rounded-3xl p-8 hover:scale-105 transition-all duration-500 group">
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="w-16 h-16 bg-gradient-to-br from-rose-400 to-red-500 rounded-2xl flex items-center justify-center shadow-2xl group-hover:rotate-12 transition-transform duration-500">
+                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
                                 </svg>
                             </div>
-                            <div class="ml-4">
-                                <p class="text-sm font-medium text-gray-600">Avvik</p>
-                                <p class="text-2xl font-semibold text-gray-900">${data.deviations.length}</p>
+                            <div class="text-right">
+                                <span class="px-4 py-2 bg-gradient-to-r from-rose-500/20 to-red-500/20 border border-rose-500/30 rounded-full text-sm font-medium text-rose-300">
+                                    ${data.deviations.length}
+                                </span>
                             </div>
                         </div>
+                        <h3 class="text-2xl font-bold text-white mb-2">Avvik</h3>
+                        <p class="text-gray-300">Åpne avvik som krever oppmerksomhet</p>
                     </div>
                 </div>
                 
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <!-- Recent Employees -->
-                    <div class="bg-white rounded-lg shadow">
-                        <div class="px-6 py-4 border-b border-gray-200">
-                            <h3 class="text-lg font-medium text-gray-900">Siste Ansatte</h3>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+                    <div class="neo-card rounded-3xl shadow-2xl">
+                        <div class="px-8 py-6 border-b border-white/10">
+                            <h3 class="text-2xl font-bold text-white">Siste Ansatte</h3>
                         </div>
-                        <div class="p-6">
+                        <div class="p-8">
                             ${data.employees.slice(0, 5).map(employee => `
-                                <div class="flex items-center justify-between py-2">
+                                <div class="flex items-center justify-between py-4 hover:bg-white/5 rounded-2xl px-4 transition-all duration-300 group">
                                     <div class="flex items-center">
-                                        <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-                                            <span class="text-sm font-medium text-gray-600">${employee.name ? employee.name.charAt(0).toUpperCase() : 'A'}</span>
+                                        <div class="w-12 h-12 bg-gradient-to-br from-emerald-400 to-green-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                                            <span class="text-lg font-bold text-white">${employee.name ? employee.name.charAt(0).toUpperCase() : 'A'}</span>
                                         </div>
-                                        <div class="ml-3">
-                                            <p class="text-sm font-medium text-gray-900">${employee.name || 'Ukjent navn'}</p>
-                                            <p class="text-sm text-gray-500">${employee.email || 'Ingen e-post'}</p>
+                                        <div class="ml-4">
+                                            <p class="text-lg font-semibold text-white group-hover:text-emerald-300 transition-colors duration-300">${employee.name || 'Ukjent navn'}</p>
+                                            <p class="text-gray-300">${employee.email || 'Ingen e-post'}</p>
                                         </div>
                                     </div>
-                                    <span class="text-sm text-gray-500">${employee.department || 'Ingen avdeling'}</span>
+                                    <span class="px-4 py-2 bg-gradient-to-r from-emerald-500/20 to-green-500/20 border border-emerald-500/30 rounded-full text-sm font-medium text-emerald-300">${employee.department || 'Ingen avdeling'}</span>
                                 </div>
                             `).join('')}
-                            ${data.employees.length === 0 ? '<p class="text-gray-500 text-sm">Ingen ansatte funnet</p>' : ''}
+                            ${data.employees.length === 0 ? '<p class="text-gray-400 text-center py-8">Ingen ansatte funnet</p>' : ''}
                         </div>
                     </div>
                     
-                    <!-- Recent Deviations -->
-                    <div class="bg-white rounded-lg shadow">
-                        <div class="px-6 py-4 border-b border-gray-200">
-                            <h3 class="text-lg font-medium text-gray-900">Siste Avvik</h3>
+                    <div class="neo-card rounded-3xl shadow-2xl">
+                        <div class="px-8 py-6 border-b border-white/10">
+                            <h3 class="text-2xl font-bold text-white">Siste Avvik</h3>
                         </div>
-                        <div class="p-6">
+                        <div class="p-8">
                             ${data.deviations.slice(0, 5).map(deviation => `
-                                <div class="flex items-center justify-between py-2">
+                                <div class="flex items-center justify-between py-4 hover:bg-white/5 rounded-2xl px-4 transition-all duration-300 group">
                                     <div class="flex items-center">
-                                        <div class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                                            <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <div class="w-12 h-12 bg-gradient-to-br from-rose-400 to-red-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
                                             </svg>
                                         </div>
-                                        <div class="ml-3">
-                                            <p class="text-sm font-medium text-gray-900">${deviation.title || 'Ukjent avvik'}</p>
-                                            <p class="text-sm text-gray-500">${deviation.description || 'Ingen beskrivelse'}</p>
+                                        <div class="ml-4">
+                                            <p class="text-lg font-semibold text-white group-hover:text-rose-300 transition-colors duration-300">${deviation.title || 'Ukjent avvik'}</p>
+                                            <p class="text-gray-300">${deviation.description || 'Ingen beskrivelse'}</p>
                                         </div>
                                     </div>
-                                    <span class="text-sm text-gray-500">${deviation.status || 'Åpen'}</span>
+                                    <span class="px-4 py-2 bg-gradient-to-r from-rose-500/20 to-red-500/20 border border-rose-500/30 rounded-full text-sm font-medium text-rose-300">${deviation.status || 'Åpen'}</span>
                                 </div>
                             `).join('')}
-                            ${data.deviations.length === 0 ? '<p class="text-gray-500 text-sm">Ingen avvik funnet</p>' : ''}
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- All Data Summary -->
-                <div class="mt-8 bg-white rounded-lg shadow">
-                    <div class="px-6 py-4 border-b border-gray-200">
-                        <h3 class="text-lg font-medium text-gray-900">Alle Data fra Firestore</h3>
-                    </div>
-                    <div class="p-6">
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-                            <div class="bg-blue-50 p-4 rounded">
-                                <h4 class="font-medium text-blue-900">Bedrifter (${data.companies.length})</h4>
-                                <ul class="mt-2 text-blue-700">
-                                    ${data.companies.map(company => `<li>• ${company.name || company.id}</li>`).join('')}
-                                </ul>
-                            </div>
-                            <div class="bg-green-50 p-4 rounded">
-                                <h4 class="font-medium text-green-900">Avdelinger (${data.departments.length})</h4>
-                                <ul class="mt-2 text-green-700">
-                                    ${data.departments.map(dept => `<li>• ${dept.name || dept.id}</li>`).join('')}
-                                </ul>
-                            </div>
-                            <div class="bg-purple-50 p-4 rounded">
-                                <h4 class="font-medium text-purple-900">Skift (${data.shifts.length})</h4>
-                                <ul class="mt-2 text-purple-700">
-                                    ${data.shifts.map(shift => `<li>• ${shift.title || shift.id}</li>`).join('')}
-                                </ul>
-                            </div>
-                            <div class="bg-yellow-50 p-4 rounded">
-                                <h4 class="font-medium text-yellow-900">Dokumenter (${data.documents.length})</h4>
-                                <ul class="mt-2 text-yellow-700">
-                                    ${data.documents.map(doc => `<li>• ${doc.title || doc.id}</li>`).join('')}
-                                </ul>
-                            </div>
+                            ${data.deviations.length === 0 ? '<p class="text-gray-400 text-center py-8">Ingen avvik funnet</p>' : ''}
                         </div>
                     </div>
                 </div>
             `;
         }
 
-        // Function to show add user modal
-        function showAddUserModal() {
-            document.getElementById('addUserModal').style.display = 'block';
-            loadDepartments();
+        function logout() {
+            auth.signOut().then(() => {
+                localStorage.removeItem('currentUser');
+                localStorage.removeItem('selectedCompanyId');
+                showCompanySearch();
+            });
         }
-
-        // Function to hide add user modal
-        function hideAddUserModal() {
-            document.getElementById('addUserModal').style.display = 'none';
-        }
-
-        // Function to load departments for dropdown
-        async function loadDepartments() {
-            try {
-                const selectedCompanyId = localStorage.getItem('selectedCompanyId') || 'driftpro-40ccd';
-                const snapshot = await db.collection('departments').where('companyId', '==', selectedCompanyId).get();
-                const select = document.getElementById('userDepartment');
-                select.innerHTML = '<option value="">Velg avdeling</option>';
-
-                snapshot.forEach(doc => {
-                    const department = doc.data();
-                    const option = document.createElement('option');
-                    option.value = doc.id;
-                    option.textContent = department.name;
-                    select.appendChild(option);
-                });
-            } catch (error) {
-                console.error('Error loading departments:', error);
-            }
-        }
-
-        // Function to create user
-        async function createUser() {
-            const name = document.getElementById('userName').value;
-            const email = document.getElementById('userEmail').value;
-            const department = document.getElementById('userDepartment').value;
-            const role = document.getElementById('userRole').value;
-
-            if (!name || !email || !department || !role) {
-                alert('Vennligst fyll ut alle feltene');
-                return;
-            }
-
-            try {
-                const selectedCompanyId = localStorage.getItem('selectedCompanyId') || 'driftpro-40ccd';
-                const userData = {
-                    name: name,
-                    email: email,
-                    department: department,
-                    role: role,
-                    companyId: selectedCompanyId,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    status: 'active'
-                };
-
-                await db.collection('users').add(userData);
-                console.log('User created successfully');
-                alert('Bruker opprettet!');
-                hideAddUserModal();
-                loadDashboardStats();
-            } catch (error) {
-                console.error('Error creating user:', error);
-                alert('Feil ved opprettelse av bruker: ' + error.message);
-            }
-        }
-
-        // Initialize when DOM is loaded
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM loaded, initializing Firebase...');
-        });
     </script>
     <style>
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        body {
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 25%, #16213e 50%, #0f3460 75%, #533483 100%);
+            min-height: 100vh;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        
+        .neo-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+        
+        .neo-card:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 
+                0 16px 64px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+        
+        .floating-animation {
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        .glow-effect {
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+        }
+        
+        .text-glow {
+            text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
     </style>
 </head>
-<body class="bg-gray-900 text-white min-h-screen">
+<body class="text-white min-h-screen">
     <!-- Loading Screen -->
-    <div id="loadingScreen" style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; background: #111827;">
-        <div style="text-align: center;">
-            <h1 style="font-size: 2rem; font-weight: bold; margin-bottom: 1rem;">Laster DriftPro Admin Panel...</h1>
-            <div style="width: 4rem; height: 4rem; border: 4px solid #374151; border-top: 4px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+    <div id="loadingScreen" class="fixed inset-0 bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center z-50">
+        <div class="text-center">
+            <div class="w-32 h-32 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-8 floating-animation shadow-2xl">
+                <svg class="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                </svg>
+            </div>
+            <h1 class="text-4xl font-bold text-white mb-4 text-glow">DriftPro Admin Panel</h1>
+            <div class="w-16 h-16 border-4 border-white/30 border-t-cyan-400 rounded-full animate-spin mx-auto"></div>
         </div>
     </div>
 
     <!-- Company Search Screen -->
-    <div id="companySearchScreen" style="display: none; flex-direction: column; justify-content: center; align-items: center; height: 100vh; background: #111827; padding: 2rem;">
-        <div style="max-width: 500px; width: 100%;">
-            <h1 style="font-size: 2rem; font-weight: bold; margin-bottom: 2rem; text-align: center;">Velg Bedrift</h1>
-            <input type="text" id="companySearchInput" placeholder="Skriv minst 2 bokstaver for å søke..." style="width: 100%; padding: 0.75rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; box-sizing: border-box;" oninput="searchCompanies(this.value)">
-            <div id="companySearchResults" style="margin-top: 1rem;"></div>
+    <div id="companySearchScreen" class="min-h-screen flex items-center justify-center p-8" style="display: none;">
+        <div class="w-full max-w-6xl">
+            <div class="text-center mb-12">
+                <div class="w-24 h-24 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-3xl flex items-center justify-center mx-auto mb-8 floating-animation shadow-2xl">
+                    <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </div>
+                <h1 class="text-5xl font-bold gradient-text mb-4">Søk etter Bedrift</h1>
+                <p class="text-xl text-gray-300 mb-8">Finn din bedrift for å komme i gang</p>
+                
+                <div class="max-w-md mx-auto mb-8">
+                    <div class="relative">
+                        <input type="text" id="companySearch" placeholder="Skriv bedriftsnavn..." 
+                               class="w-full px-6 py-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-400/20 transition-all duration-300"
+                               onkeyup="searchCompanies()">
+                        <div class="absolute right-4 top-1/2 transform -translate-y-1/2">
+                            <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="companiesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Companies will be loaded here -->
+            </div>
         </div>
     </div>
 
     <!-- Login Screen -->
-    <div id="loginScreen" style="display: none; flex-direction: column; justify-content: center; align-items: center; height: 100vh; background: #111827; padding: 2rem;">
-        <div style="max-width: 400px; width: 100%;">
-            <h1 style="font-size: 2rem; font-weight: bold; margin-bottom: 2rem; text-align: center;">Logg Inn</h1>
-            <div style="margin-bottom: 1rem;">
-                <label style="display: block; margin-bottom: 0.5rem; color: #d1d5db;">E-post</label>
-                <input type="email" id="loginEmail" placeholder="din@email.com" style="width: 100%; padding: 0.75rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; box-sizing: border-box;">
+    <div id="loginScreen" class="min-h-screen flex items-center justify-center p-8" style="display: none;">
+        <div class="w-full max-w-md">
+            <div class="neo-card rounded-3xl p-12 shadow-2xl">
+                <div class="text-center mb-8">
+                    <div class="w-20 h-20 bg-gradient-to-br from-emerald-400 to-green-500 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl">
+                        <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                        </svg>
+                    </div>
+                    <h2 class="text-3xl font-bold text-white mb-2">Logg Inn</h2>
+                    <p class="text-gray-300">Tilgang til DriftPro Admin Panel</p>
+                </div>
+                
+                <div class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">E-post</label>
+                        <input type="email" id="email" placeholder="din@email.com" 
+                               class="w-full px-4 py-3 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/20 transition-all duration-300">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Passord</label>
+                        <input type="password" id="password" placeholder="••••••••" 
+                               class="w-full px-4 py-3 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/20 transition-all duration-300">
+                    </div>
+                    
+                    <button onclick="login()" class="w-full py-4 bg-gradient-to-r from-emerald-400 to-green-500 text-white font-bold rounded-xl hover:from-emerald-500 hover:to-green-600 transform hover:scale-105 transition-all duration-300 shadow-2xl glow-effect">
+                        Logg Inn
+                    </button>
+                </div>
+                
+                <div class="mt-6 text-center">
+                    <button onclick="showCompanySearch()" class="text-gray-400 hover:text-white transition-colors duration-300">
+                        ← Tilbake til bedriftssøk
+                    </button>
+                </div>
             </div>
-            <div style="margin-bottom: 2rem;">
-                <label style="display: block; margin-bottom: 0.5rem; color: #d1d5db;">Passord</label>
-                <input type="password" id="loginPassword" placeholder="Passord" style="width: 100%; padding: 0.75rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; box-sizing: border-box;">
-            </div>
-            <button onclick="handleLogin(document.getElementById('loginEmail').value, document.getElementById('loginPassword').value)" style="width: 100%; padding: 0.75rem; background: #3b82f6; color: white; border: none; border-radius: 0.5rem; font-weight: bold; cursor: pointer; margin-bottom: 1rem;">Logg Inn</button>
-            <button onclick="showCompanySearch()" style="width: 100%; padding: 0.75rem; background: #6b7280; color: white; border: none; border-radius: 0.5rem; font-weight: bold; cursor: pointer;">Tilbake</button>
         </div>
     </div>
 
     <!-- Dashboard Screen -->
-    <div id="dashboardScreen" style="display: none;">
+    <div id="dashboardScreen" class="min-h-screen" style="display: none;">
         <!-- Header -->
-        <header class="bg-white shadow">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between items-center py-6">
-                    <div class="flex items-center">
-                        <h1 class="text-3xl font-bold text-gray-900">DriftPro Admin Panel</h1>
+        <header class="neo-card border-b border-white/10 sticky top-0 z-40">
+            <div class="max-w-7xl mx-auto px-8 py-6">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center space-x-6">
+                        <div class="w-12 h-12 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-2xl flex items-center justify-center shadow-2xl">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                        </div>
+                        <h1 class="text-3xl font-bold gradient-text">DriftPro Admin Panel</h1>
                     </div>
-                    <div class="flex items-center space-x-4">
-                        <span class="text-gray-700">Logget inn som: <span id="userName" class="font-semibold"></span></span>
-                        <button onclick="auth.signOut()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium">Logg Ut</button>
+                    <div class="flex items-center space-x-6">
+                        <span class="text-gray-300">Logget inn som: <span id="userName" class="font-semibold text-white"></span></span>
+                        <button onclick="logout()" class="px-6 py-3 bg-gradient-to-r from-rose-400 to-red-500 text-white font-bold rounded-xl hover:from-rose-500 hover:to-red-600 transform hover:scale-105 transition-all duration-300 shadow-2xl">
+                            Logg Ut
+                        </button>
                     </div>
                 </div>
             </div>
         </header>
 
         <!-- Main content -->
-        <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <main class="max-w-7xl mx-auto py-12 px-8">
             <!-- Navigation -->
-            <div class="px-4 py-6 sm:px-0">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
-                    <a href="/employees.html" class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
+            <div class="mb-16">
+                <h2 class="text-4xl font-bold text-white mb-8 text-center">Velg Seksjon</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-8">
+                    <a href="/employees.html" class="neo-card rounded-3xl p-8 hover:scale-105 transition-all duration-500 group">
                         <div class="flex items-center">
-                            <div class="p-3 rounded-full bg-blue-100 text-blue-600">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div class="w-16 h-16 bg-gradient-to-br from-emerald-400 to-green-500 rounded-2xl flex items-center justify-center shadow-2xl group-hover:rotate-12 transition-transform duration-500">
+                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
                                 </svg>
                             </div>
-                            <div class="ml-4">
-                                <p class="text-sm font-medium text-gray-900">Ansatte</p>
+                            <div class="ml-6">
+                                <p class="text-xl font-bold text-white group-hover:text-emerald-300 transition-colors duration-300">Ansatte</p>
+                                <p class="text-gray-300">Administrer ansatte</p>
                             </div>
                         </div>
                     </a>
                     
-                    <a href="/departments.html" class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
+                    <a href="/departments.html" class="neo-card rounded-3xl p-8 hover:scale-105 transition-all duration-500 group">
                         <div class="flex items-center">
-                            <div class="p-3 rounded-full bg-purple-100 text-purple-600">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div class="w-16 h-16 bg-gradient-to-br from-violet-400 to-purple-500 rounded-2xl flex items-center justify-center shadow-2xl group-hover:rotate-12 transition-transform duration-500">
+                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
                                 </svg>
                             </div>
-                            <div class="ml-4">
-                                <p class="text-sm font-medium text-gray-900">Avdelinger</p>
+                            <div class="ml-6">
+                                <p class="text-xl font-bold text-white group-hover:text-violet-300 transition-colors duration-300">Avdelinger</p>
+                                <p class="text-gray-300">Organiser avdelinger</p>
                             </div>
                         </div>
                     </a>
                     
-                    <a href="/deviations.html" class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
+                    <a href="/deviations.html" class="neo-card rounded-3xl p-8 hover:scale-105 transition-all duration-500 group">
                         <div class="flex items-center">
-                            <div class="p-3 rounded-full bg-red-100 text-red-600">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div class="w-16 h-16 bg-gradient-to-br from-rose-400 to-red-500 rounded-2xl flex items-center justify-center shadow-2xl group-hover:rotate-12 transition-transform duration-500">
+                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
                                 </svg>
                             </div>
-                            <div class="ml-4">
-                                <p class="text-sm font-medium text-gray-900">Avvik</p>
+                            <div class="ml-6">
+                                <p class="text-xl font-bold text-white group-hover:text-rose-300 transition-colors duration-300">Avvik</p>
+                                <p class="text-gray-300">Håndter avvik</p>
                             </div>
                         </div>
                     </a>
                     
-                    <a href="/shifts.html" class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
+                    <a href="/shifts.html" class="neo-card rounded-3xl p-8 hover:scale-105 transition-all duration-500 group">
                         <div class="flex items-center">
-                            <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div class="w-16 h-16 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-2xl group-hover:rotate-12 transition-transform duration-500">
+                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
                             </div>
-                            <div class="ml-4">
-                                <p class="text-sm font-medium text-gray-900">Skiftplaner</p>
+                            <div class="ml-6">
+                                <p class="text-xl font-bold text-white group-hover:text-amber-300 transition-colors duration-300">Skiftplaner</p>
+                                <p class="text-gray-300">Planlegg skift</p>
                             </div>
                         </div>
                     </a>
                     
-                    <a href="/chat.html" class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
+                    <a href="/chat.html" class="neo-card rounded-3xl p-8 hover:scale-105 transition-all duration-500 group">
                         <div class="flex items-center">
-                            <div class="p-3 rounded-full bg-green-100 text-green-600">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div class="w-16 h-16 bg-gradient-to-br from-teal-400 to-cyan-500 rounded-2xl flex items-center justify-center shadow-2xl group-hover:rotate-12 transition-transform duration-500">
+                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
                                 </svg>
                             </div>
-                            <div class="ml-4">
-                                <p class="text-sm font-medium text-gray-900">Chat</p>
+                            <div class="ml-6">
+                                <p class="text-xl font-bold text-white group-hover:text-teal-300 transition-colors duration-300">Chat</p>
+                                <p class="text-gray-300">Kommunikasjon</p>
                             </div>
                         </div>
                     </a>
                     
-                    <a href="/documents.html" class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
+                    <a href="/documents.html" class="neo-card rounded-3xl p-8 hover:scale-105 transition-all duration-500 group">
                         <div class="flex items-center">
-                            <div class="p-3 rounded-full bg-indigo-100 text-indigo-600">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div class="w-16 h-16 bg-gradient-to-br from-indigo-400 to-blue-500 rounded-2xl flex items-center justify-center shadow-2xl group-hover:rotate-12 transition-transform duration-500">
+                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                                 </svg>
                             </div>
-                            <div class="ml-4">
-                                <p class="text-sm font-medium text-gray-900">Dokumenter</p>
+                            <div class="ml-6">
+                                <p class="text-xl font-bold text-white group-hover:text-indigo-300 transition-colors duration-300">Dokumenter</p>
+                                <p class="text-gray-300">Fildokumenter</p>
                             </div>
                         </div>
                     </a>
                 </div>
+            </div>
 
-                <!-- Dashboard Stats -->
-                <div id="dashboardStats">
-                    <div class="text-center py-12">
-                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                        <p class="mt-2 text-sm text-gray-600">Laster dashboard data...</p>
-                    </div>
+            <!-- Dashboard Stats -->
+            <div id="dashboardStats">
+                <div class="text-center py-16">
+                    <div class="w-16 h-16 border-4 border-white/30 border-t-cyan-400 rounded-full animate-spin mx-auto mb-6"></div>
+                    <p class="text-xl text-gray-300">Laster dashboard data...</p>
                 </div>
             </div>
         </main>
-    </div>
-
-    <!-- Add User Modal -->
-    <div id="addUserModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000;">
-        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 2rem; border-radius: 0.5rem; width: 90%; max-width: 500px;">
-            <h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem; color: #1f2937;">Legg til ny bruker</h2>
-            <div style="margin-bottom: 1rem;">
-                <label style="display: block; margin-bottom: 0.5rem; color: #374151;">Navn</label>
-                <input type="text" id="userName" placeholder="Fullt navn" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; box-sizing: border-box;">
-            </div>
-            <div style="margin-bottom: 1rem;">
-                <label style="display: block; margin-bottom: 0.5rem; color: #374151;">E-post</label>
-                <input type="email" id="userEmail" placeholder="email@example.com" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; box-sizing: border-box;">
-            </div>
-            <div style="margin-bottom: 1rem;">
-                <label style="display: block; margin-bottom: 0.5rem; color: #374151;">Avdeling</label>
-                <select id="userDepartment" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; box-sizing: border-box;">
-                    <option value="">Velg avdeling</option>
-                </select>
-            </div>
-            <div style="margin-bottom: 2rem;">
-                <label style="display: block; margin-bottom: 0.5rem; color: #374151;">Rolle</label>
-                <select id="userRole" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; box-sizing: border-box;">
-                    <option value="">Velg rolle</option>
-                    <option value="admin">Administrator</option>
-                    <option value="manager">Leder</option>
-                    <option value="employee">Ansatt</option>
-                </select>
-            </div>
-            <div style="display: flex; gap: 1rem;">
-                <button onclick="createUser()" style="flex: 1; padding: 0.75rem; background: #3b82f6; color: white; border: none; border-radius: 0.5rem; font-weight: bold; cursor: pointer;">Opprett</button>
-                <button onclick="hideAddUserModal()" style="flex: 1; padding: 0.75rem; background: #6b7280; color: white; border: none; border-radius: 0.5rem; font-weight: bold; cursor: pointer;">Avbryt</button>
-            </div>
-        </div>
     </div>
 </body>
 </html>
