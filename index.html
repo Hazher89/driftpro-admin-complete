@@ -48,6 +48,9 @@
                     companies.push({ id: doc.id, ...doc.data() });
                 });
                 
+                // Store companies globally for search
+                window.allCompanies = companies;
+                
                 const companiesContainer = document.getElementById('companiesContainer');
                 if (companies.length === 0) {
                     companiesContainer.innerHTML = `
@@ -62,25 +65,56 @@
                         </div>
                     `;
                 } else {
-                    companiesContainer.innerHTML = companies.map(company => `
-                        <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-all duration-300 cursor-pointer" onclick="selectCompany('${company.id}')">
-                            <div class="flex items-center space-x-4">
-                                <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                                    </svg>
-                                </div>
-                                <div>
-                                    <h3 class="text-lg font-semibold text-gray-800">${company.name || 'Ukjent bedrift'}</h3>
-                                    <p class="text-gray-600">${company.description || 'Ingen beskrivelse'}</p>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('');
+                    displayCompanies(companies);
                 }
             } catch (error) {
                 console.error('Error loading companies:', error);
                 showNotification('Feil ved lasting av bedrifter', 'error');
+            }
+        }
+
+        function searchCompanies() {
+            const searchTerm = document.getElementById('companySearchInput').value.toLowerCase();
+            const companies = window.allCompanies || [];
+            
+            const filteredCompanies = companies.filter(company => 
+                company.name && company.name.toLowerCase().includes(searchTerm)
+            );
+            
+            displayCompanies(filteredCompanies);
+        }
+
+        function displayCompanies(companies) {
+            const companiesContainer = document.getElementById('companiesContainer');
+            
+            if (companies.length === 0) {
+                companiesContainer.innerHTML = `
+                    <div class="text-center py-16">
+                        <div class="w-24 h-24 bg-gradient-to-br from-red-400/20 to-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <svg class="w-12 h-12 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-800 mb-2">Ingen bedrifter funnet</h3>
+                        <p class="text-gray-600">Prøv å søke med et annet navn</p>
+                    </div>
+                `;
+            } else {
+                companiesContainer.innerHTML = companies.map(company => `
+                    <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-all duration-300 cursor-pointer" onclick="selectCompany('${company.id}')">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-800">${company.name || 'Ukjent bedrift'}</h3>
+                                <p class="text-gray-600">${company.description || 'Ingen beskrivelse'}</p>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
             }
         }
 
@@ -244,13 +278,29 @@
                     </svg>
                 </div>
                 <h1 class="text-4xl font-bold gradient-text mb-4">DriftPro</h1>
-                <p class="text-xl text-gray-600 mb-8">Velg din bedrift for å komme i gang</p>
+                <p class="text-xl text-gray-600 mb-8">Søk etter din bedrift for å komme i gang</p>
             </div>
             
             <div class="bg-white rounded-2xl shadow-2xl p-8">
                 <div class="mb-8">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Tilgjengelige Bedrifter</h2>
-                    <p class="text-gray-600">Klikk på din bedrift for å logge inn</p>
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Søk etter Bedrift</h2>
+                    <p class="text-gray-600 mb-6">Skriv navnet på din bedrift for å finne den</p>
+                    
+                    <!-- Search Input -->
+                    <div class="relative max-w-md mx-auto">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                        <input 
+                            type="text" 
+                            id="companySearchInput"
+                            onkeyup="searchCompanies()"
+                            class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                            placeholder="Skriv bedriftsnavn..."
+                        >
+                    </div>
                 </div>
                 
                 <div id="companiesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
