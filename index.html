@@ -18,7 +18,31 @@
         </div>
     </div>
 
-
+    <!-- Company Search Screen -->
+    <div id="companySearchScreen" class="min-h-screen flex items-center justify-center">
+        <div class="bg-gray-800 p-8 rounded-lg shadow-lg max-w-md w-full">
+            <div class="text-center mb-6">
+                <h1 class="text-3xl font-bold">DriftPro Admin</h1>
+                <p class="text-gray-400 mt-2">Søk etter din bedrift</p>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Søk etter bedrift</label>
+                    <input type="text" id="companySearch" placeholder="Skriv bedriftsnavn..." class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500">
+                </div>
+                
+                <div id="companyResults" class="space-y-2 max-h-60 overflow-y-auto">
+                    <!-- Company results will appear here -->
+                </div>
+                
+                <div id="noCompaniesMessage" class="text-center text-gray-400 hidden">
+                    <p>Ingen bedrifter funnet.</p>
+                    <p class="text-sm mt-2">Kontakt administrator for å få tilgang.</p>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Login Screen -->
     <div id="loginScreen" class="min-h-screen flex items-center justify-center">
@@ -26,6 +50,11 @@
             <div class="text-center mb-6">
                 <h1 class="text-3xl font-bold">DriftPro Admin</h1>
                 <p class="text-gray-400 mt-2">Logg inn for å administrere systemet</p>
+            </div>
+            
+            <div class="text-center mb-6">
+                <h1 class="text-3xl font-bold">DriftPro Admin</h1>
+                <p class="text-gray-400 mt-2">Logg inn for <span id="selectedCompanyName" class="text-blue-400"></span></p>
             </div>
             
             <form id="loginForm" class="space-y-4">
@@ -44,17 +73,10 @@
                 </button>
             </form>
             
-            <!-- Demo login buttons for testing -->
-            <div class="mt-4 pt-4 border-t border-gray-600">
-                <p class="text-sm text-gray-400 mb-2">Test med demo-kontoer:</p>
-                <div class="space-y-2">
-                    <button onclick="demoLogin('admin@driftpro.no', 'admin123')" class="w-full bg-green-600 hover:bg-green-700 p-2 rounded text-sm">
-                        Admin Demo
-                    </button>
-                    <button onclick="demoLogin('manager@driftpro.no', 'manager123')" class="w-full bg-yellow-600 hover:bg-yellow-700 p-2 rounded text-sm">
-                        Manager Demo
-                    </button>
-                </div>
+            <div class="mt-4 text-center">
+                <button onclick="backToCompanySearch()" class="text-blue-400 hover:text-blue-300 text-sm">
+                    ← Tilbake til bedriftssøk
+                </button>
             </div>
             
             <div id="loginError" class="mt-4 text-red-400 text-center hidden"></div>
@@ -384,40 +406,34 @@
 
         // Initialize app
         document.addEventListener('DOMContentLoaded', function() {
-            checkAuthState();
+            showCompanySearch();
         });
 
-        function checkAuthState() {
-            // Add timeout to prevent infinite loading
-            setTimeout(() => {
-                if (document.getElementById('loadingScreen').classList.contains('hidden') === false) {
-                    console.log('Firebase connection timeout - showing login');
-                    showLogin();
-                }
-            }, 5000);
-
-            auth.onAuthStateChanged(function(user) {
-                if (user) {
-                    currentUser = user;
-                    showDashboard();
-                    loadAllData();
-                } else {
-                    showLogin();
-                }
-            }).catch(function(error) {
-                console.error('Firebase auth error:', error);
-                showLogin();
-            });
+        function showCompanySearch() {
+            document.getElementById('loadingScreen').classList.add('hidden');
+            document.getElementById('companySearchScreen').classList.remove('hidden');
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('dashboard').classList.add('hidden');
+            
+            // Load companies and setup search
+            loadCompaniesForSearch();
+            setupCompanySearch();
         }
 
         function showLogin() {
             document.getElementById('loadingScreen').classList.add('hidden');
+            document.getElementById('companySearchScreen').classList.add('hidden');
             document.getElementById('loginScreen').classList.remove('hidden');
             document.getElementById('dashboard').classList.add('hidden');
         }
 
+        function backToCompanySearch() {
+            showCompanySearch();
+        }
+
         function showDashboard() {
             document.getElementById('loadingScreen').classList.add('hidden');
+            document.getElementById('companySearchScreen').classList.add('hidden');
             document.getElementById('loginScreen').classList.add('hidden');
             document.getElementById('dashboard').classList.remove('hidden');
             document.getElementById('currentUser').textContent = currentUser.email;
@@ -429,7 +445,18 @@
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             
+            if (!selectedCompany) {
+                document.getElementById('loginError').textContent = 'Vennligst velg en bedrift først';
+                document.getElementById('loginError').classList.remove('hidden');
+                return;
+            }
+            
             auth.signInWithEmailAndPassword(email, password)
+                .then(function(user) {
+                    currentUser = user;
+                    showDashboard();
+                    loadAllData();
+                })
                 .catch(function(error) {
                     document.getElementById('loginError').textContent = error.message;
                     document.getElementById('loginError').classList.remove('hidden');
@@ -438,12 +465,7 @@
 
         function logout() {
             auth.signOut();
-        }
-
-        function demoLogin(email, password) {
-            document.getElementById('email').value = email;
-            document.getElementById('password').value = password;
-            document.getElementById('loginForm').dispatchEvent(new Event('submit'));
+            showCompanySearch();
         }
 
         // Load all data from Firestore
@@ -462,6 +484,65 @@
             } catch (error) {
                 console.error('Error loading data:', error);
             }
+        }
+
+        async function loadCompaniesForSearch() {
+            try {
+                const snapshot = await db.collection('companies').get();
+                companies = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            } catch (error) {
+                console.error('Error loading companies:', error);
+                // If no companies exist, create demo companies
+                companies = [
+                    { id: 'demo1', name: 'DriftPro Hovedkontor' },
+                    { id: 'demo2', name: 'DriftPro Nord' },
+                    { id: 'demo3', name: 'DriftPro Vest' },
+                    { id: 'demo4', name: 'DriftPro Øst' }
+                ];
+            }
+        }
+
+        function setupCompanySearch() {
+            const searchInput = document.getElementById('companySearch');
+            const resultsDiv = document.getElementById('companyResults');
+            const noCompaniesDiv = document.getElementById('noCompaniesMessage');
+
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                const filteredCompanies = companies.filter(company => 
+                    company.name.toLowerCase().includes(searchTerm)
+                );
+
+                resultsDiv.innerHTML = '';
+                noCompaniesDiv.classList.add('hidden');
+
+                if (filteredCompanies.length === 0) {
+                    if (searchTerm.length > 0) {
+                        noCompaniesDiv.classList.remove('hidden');
+                    }
+                    return;
+                }
+
+                filteredCompanies.forEach(company => {
+                    const companyDiv = document.createElement('div');
+                    companyDiv.className = 'p-3 bg-gray-700 rounded-lg hover:bg-gray-600 cursor-pointer transition-colors';
+                    companyDiv.innerHTML = `
+                        <div class="font-medium">${company.name}</div>
+                        <div class="text-sm text-gray-400">Klikk for å velge</div>
+                    `;
+                    companyDiv.onclick = () => selectCompany(company);
+                    resultsDiv.appendChild(companyDiv);
+                });
+            });
+
+            // Show all companies initially
+            searchInput.dispatchEvent(new Event('input'));
+        }
+
+        function selectCompany(company) {
+            selectedCompany = company.id;
+            document.getElementById('selectedCompanyName').textContent = company.name;
+            showLogin();
         }
 
         async function loadCompanies() {
