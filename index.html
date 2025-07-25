@@ -29,9 +29,66 @@
             if (user) {
                 showDashboard(user);
             } else {
-                showLoginScreen();
+                showCompanySearch();
             }
         });
+
+        async function showCompanySearch() {
+            document.getElementById('companySearchScreen').style.display = 'flex';
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('dashboardScreen').style.display = 'none';
+            await loadAllCompanies();
+        }
+
+        async function loadAllCompanies() {
+            try {
+                const snapshot = await db.collection('companies').get();
+                const companies = [];
+                snapshot.forEach(doc => {
+                    companies.push({ id: doc.id, ...doc.data() });
+                });
+                
+                const companiesContainer = document.getElementById('companiesContainer');
+                if (companies.length === 0) {
+                    companiesContainer.innerHTML = `
+                        <div class="text-center py-16">
+                            <div class="w-24 h-24 bg-gradient-to-br from-gray-400/20 to-gray-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                                </svg>
+                            </div>
+                            <h3 class="text-2xl font-bold text-gray-800 mb-2">Ingen bedrifter funnet</h3>
+                            <p class="text-gray-600">Det er ingen bedrifter registrert ennå</p>
+                        </div>
+                    `;
+                } else {
+                    companiesContainer.innerHTML = companies.map(company => `
+                        <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-all duration-300 cursor-pointer" onclick="selectCompany('${company.id}')">
+                            <div class="flex items-center space-x-4">
+                                <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-800">${company.name || 'Ukjent bedrift'}</h3>
+                                    <p class="text-gray-600">${company.description || 'Ingen beskrivelse'}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading companies:', error);
+                showNotification('Feil ved lasting av bedrifter', 'error');
+            }
+        }
+
+        function selectCompany(companyId) {
+            // Store selected company ID
+            localStorage.setItem('selectedCompanyId', companyId);
+            showLoginScreen();
+        }
 
         async function login() {
             const email = document.getElementById('email').value;
@@ -51,6 +108,7 @@
         }
 
         async function showDashboard(user) {
+            document.getElementById('companySearchScreen').style.display = 'none';
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('dashboardScreen').style.display = 'block';
             
@@ -59,8 +117,9 @@
         }
 
         function showLoginScreen() {
-            document.getElementById('dashboardScreen').style.display = 'none';
+            document.getElementById('companySearchScreen').style.display = 'none';
             document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('dashboardScreen').style.display = 'none';
         }
 
         async function loadUserData(user) {
@@ -146,7 +205,7 @@
 
         function logout() {
             auth.signOut().then(() => {
-                showNotification('Du er logget ut', 'info');
+                showCompanySearch();
             });
         }
     </script>
@@ -175,6 +234,32 @@
     </style>
 </head>
 <body class="text-gray-800">
+    <!-- Company Search Screen -->
+    <div id="companySearchScreen" class="min-h-screen flex items-center justify-center p-4" style="display: none;">
+        <div class="max-w-4xl w-full">
+            <div class="text-center mb-12">
+                <div class="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                    <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                </div>
+                <h1 class="text-4xl font-bold gradient-text mb-4">DriftPro</h1>
+                <p class="text-xl text-gray-600 mb-8">Velg din bedrift for å komme i gang</p>
+            </div>
+            
+            <div class="bg-white rounded-2xl shadow-2xl p-8">
+                <div class="mb-8">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Tilgjengelige Bedrifter</h2>
+                    <p class="text-gray-600">Klikk på din bedrift for å logge inn</p>
+                </div>
+                
+                <div id="companiesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Companies will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Login Screen -->
     <div id="loginScreen" class="min-h-screen flex items-center justify-center p-4" style="display: none;">
         <div class="max-w-md w-full">
