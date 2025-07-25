@@ -16,7 +16,8 @@
         
         // Function to handle company selection
         // Function to search companies
-        function searchCompanies(query) {
+        // Function to search companies from Firestore
+        async function searchCompanies(query) {
             const resultsContainer = document.getElementById('companySearchResults');
             
             if (query.length < 2) {
@@ -28,73 +29,101 @@
                 return;
             }
             
-            // Mock company data - in real app this would come from database
-            const companies = [
-                { id: 'driftpro-40ccd', name: 'DriftPro', code: 'driftpro-40ccd' },
-                { id: 'test-company', name: 'Test Bedrift', code: 'test-company' },
-                { id: 'acme-corp', name: 'ACME Corporation', code: 'acme-corp' },
-                { id: 'tech-solutions', name: 'Tech Solutions AS', code: 'tech-solutions' },
-                { id: 'nordic-engineering', name: 'Nordic Engineering', code: 'nordic-engineering' }
-            ];
-            
-            // Filter companies based on search query
-            const filteredCompanies = companies.filter(company => 
-                company.name.toLowerCase().includes(query.toLowerCase()) || 
-                company.code.toLowerCase().includes(query.toLowerCase())
-            );
-            
-            if (filteredCompanies.length === 0) {
-                resultsContainer.innerHTML = `
-                    <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #9ca3af; text-align: center;">
-                        Ingen bedrifter funnet for "${query}"
-                    </div>
-                `;
-            } else {
-                resultsContainer.innerHTML = filteredCompanies.map(company => `
-                    <button onclick="selectFallbackCompany('${company.id}')" style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; cursor: pointer; text-align: left; transition: background 0.2s; hover:background: #4b5563;">
-                        <div style="font-weight: bold; margin-bottom: 0.25rem;">${company.name}</div>
-                        <div style="font-size: 0.875rem; color: #9ca3af;">${company.code}</div>
-                    </button>
-                `).join(');
-            }
-        }
-        
-        // Function to handle company selection
-        function selectFallbackCompany(companyId) {
-            console.log('Company selected:', companyId);
-            
-            // Get company name for display
-            const companies = [
-                { id: 'driftpro-40ccd', name: 'DriftPro' },
-                { id: 'test-company', name: 'Test Bedrift' },
-                { id: 'acme-corp', name: 'ACME Corporation' },
-                { id: 'tech-solutions', name: 'Tech Solutions AS' },
-                { id: 'nordic-engineering', name: 'Nordic Engineering' }
-            ];
-            const company = companies.find(c => c.id === companyId) || { name: companyId };
-            
-            // Update fallback screen to show login
-            const fallbackScreen = document.getElementById('fallbackScreen');
-            fallbackScreen.innerHTML = `
-                <div style="text-align: center; color: white; background: #1f2937; padding: 2rem; border-radius: 0.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.5); max-width: 400px; width: 100%;">
-                    <h1 style="font-size: 2rem; margin-bottom: 0.5rem; color: #3b82f6;">DriftPro Admin</h1>
-                    <p style="margin-bottom: 2rem; color: #9ca3af;">Logg inn for <span style="color: #3b82f6;">${company.name}</span></p>
-                    <form onsubmit="handleFallbackLogin(event)" style="display: flex; flex-direction: column; gap: 1rem;">
-                        <div>
-                            <label style="display: block; text-align: left; margin-bottom: 0.5rem; color: #d1d5db;">E-post</label>
-                            <input type="email" id="fallbackEmail" placeholder="Skriv inn e-post" required style="width: 100%; padding: 0.75rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; box-sizing: border-box;">
-                        </div>
-                        <div>
-                            <label style="display: block; text-align: left; margin-bottom: 0.5rem; color: #d1d5db;">Passord</label>
-                            <input type="password" id="fallbackPassword" placeholder="Skriv inn passord" required style="width: 100%; padding: 0.75rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; box-sizing: border-box;">
-                        </div>
-                        <button type="submit" style="padding: 0.75rem; background: #3b82f6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: bold; margin-top: 1rem;">Logg inn</button>
-                    </form>
-                    <button onclick="showFallbackCompanySelection()" style="margin-top: 1rem; padding: 0.5rem; background: none; border: none; color: #9ca3af; cursor: pointer; text-decoration: underline;">← Tilbake til bedriftssøk</button>
+            // Show loading state
+            resultsContainer.innerHTML = `
+                <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #9ca3af; text-align: center;">
+                    Søker etter bedrifter...
                 </div>
             `;
+            
+            try {
+                // Search in Firestore companies collection
+                const companiesRef = db.collection('companies');
+                const snapshot = await companiesRef.get();
+                
+                const companies = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    companies.push({
+                        id: doc.id,
+                        name: data.name || data.companyName || 'Ukjent navn',
+                        code: data.code || data.companyCode || doc.id
+                    });
+                });
+                
+                // Filter companies based on search query
+                const filteredCompanies = companies.filter(company => 
+                    company.name.toLowerCase().includes(query.toLowerCase()) || 
+                    company.code.toLowerCase().includes(query.toLowerCase())
+                );
+                
+                if (filteredCompanies.length === 0) {
+                    resultsContainer.innerHTML = `
+                        <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #9ca3af; text-align: center;">
+                            Ingen bedrifter funnet for "${query}"
+                        </div>
+                    `;
+                } else {
+                    resultsContainer.innerHTML = filteredCompanies.map(company => `
+                        <button onclick="selectFallbackCompany('${company.id}')" style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; cursor: pointer; text-align: left; transition: background 0.2s; hover:background: #4b5563;">
+                            <div style="font-weight: bold; margin-bottom: 0.25rem;">${company.name}</div>
+                            <div style="font-size: 0.875rem; color: #9ca3af;">${company.code}</div>
+                        </button>
+                    `).join(');
+                }
+                
+            } catch (error) {
+                console.error('Error searching companies:', error);
+                resultsContainer.innerHTML = `
+                    <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #ef4444; text-align: center;">
+                        Feil ved søk etter bedrifter. Prøv igjen.
+                    </div>
+                `;
+            }
         }
                 
+        // Function to handle company selection
+        // Function to handle company selection
+        async function selectFallbackCompany(companyId) {
+            console.log('Company selected:', companyId);
+            
+            try {
+                // Get company data from Firestore
+                const companyDoc = await db.collection('companies').doc(companyId).get();
+                let companyName = companyId;
+                
+                if (companyDoc.exists) {
+                    const data = companyDoc.data();
+                    companyName = data.name || data.companyName || companyId;
+                }
+                
+                // Update fallback screen to show login
+                const fallbackScreen = document.getElementById('fallbackScreen');
+                fallbackScreen.innerHTML = `
+                    <div style="text-align: center; color: white; background: #1f2937; padding: 2rem; border-radius: 0.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.5); max-width: 400px; width: 100%;">
+                        <h1 style="font-size: 2rem; margin-bottom: 0.5rem; color: #3b82f6;">DriftPro Admin</h1>
+                        <p style="margin-bottom: 2rem; color: #9ca3af;">Logg inn for <span style="color: #3b82f6;">${companyName}</span></p>
+                        <form onsubmit="handleFallbackLogin(event)" style="display: flex; flex-direction: column; gap: 1rem;">
+                            <div>
+                                <label style="display: block; text-align: left; margin-bottom: 0.5rem; color: #d1d5db;">E-post</label>
+                                <input type="email" id="fallbackEmail" placeholder="Skriv inn e-post" required style="width: 100%; padding: 0.75rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; box-sizing: border-box;">
+                            </div>
+                            <div>
+                                <label style="display: block; text-align: left; margin-bottom: 0.5rem; color: #d1d5db;">Passord</label>
+                                <input type="password" id="fallbackPassword" placeholder="Skriv inn passord" required style="width: 100%; padding: 0.75rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; box-sizing: border-box;">
+                            </div>
+                            <button type="submit" style="padding: 0.75rem; background: #3b82f6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: bold; margin-top: 1rem;">Logg inn</button>
+                        </form>
+                        <button onclick="showFallbackCompanySelection()" style="margin-top: 1rem; padding: 0.5rem; background: none; border: none; color: #9ca3af; cursor: pointer; text-decoration: underline;">← Tilbake til bedriftssøk</button>
+                    </div>
+                `;
+                
+            } catch (error) {
+                console.error('Error getting company data:', error);
+                alert('Feil ved henting av bedriftsdata');
+            }
+        }
+                        
         // Function to show company selection again
         // Function to show company selection again
         function showFallbackCompanySelection() {
@@ -116,15 +145,44 @@
         }
                 
         // Function to handle login
-        function handleFallbackLogin(event) {
+        // Function to handle login with Firebase Auth
+        async function handleFallbackLogin(event) {
             event.preventDefault();
             const email = document.getElementById('fallbackEmail').value;
             const password = document.getElementById('fallbackPassword').value;
             
-            console.log('Login attempt:', email);
-            alert(`Logg inn forsøkt med e-post: ${email}\n\nI en full implementasjon ville dette logget inn brukeren.`);
+            // Show loading state
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Logger inn...';
+            
+            try {
+                // Try to sign in with Firebase Auth
+                const userCredential = await auth.signInWithEmailAndPassword(email, password);
+                const user = userCredential.user;
+                
+                console.log('Login successful:', user.email);
+                
+                // Hide fallback screen and show dashboard
+                document.getElementById('fallbackScreen').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+                
+                // Set current user and load data
+                currentUser = user;
+                document.getElementById('currentUser').textContent = user.email;
+                loadAllData();
+                
+            } catch (error) {
+                console.error('Login error:', error);
+                alert(`Innlogging feilet: ${error.message}`);
+            } finally {
+                // Re-enable button
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
         }
-    </script>    <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #111827; display: flex; align-items: center; justify-content: center; z-index: 9999;" id="fallbackScreen">
+            </script>    <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #111827; display: flex; align-items: center; justify-content: center; z-index: 9999;" id="fallbackScreen">
                 <div style="text-align: center; color: white; background: #1f2937; padding: 2rem; border-radius: 0.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.5); max-width: 400px; width: 100%;">
                     <h1 style="font-size: 2rem; margin-bottom: 0.5rem; color: #3b82f6;">DriftPro Admin</h1>
                     <p style="margin-bottom: 2rem; color: #9ca3af;">Søk etter din bedrift</p>
@@ -571,7 +629,8 @@
         
         // Function to handle company selection
         // Function to search companies
-        function searchCompanies(query) {
+        // Function to search companies from Firestore
+        async function searchCompanies(query) {
             const resultsContainer = document.getElementById('companySearchResults');
             
             if (query.length < 2) {
@@ -583,73 +642,101 @@
                 return;
             }
             
-            // Mock company data - in real app this would come from database
-            const companies = [
-                { id: 'driftpro-40ccd', name: 'DriftPro', code: 'driftpro-40ccd' },
-                { id: 'test-company', name: 'Test Bedrift', code: 'test-company' },
-                { id: 'acme-corp', name: 'ACME Corporation', code: 'acme-corp' },
-                { id: 'tech-solutions', name: 'Tech Solutions AS', code: 'tech-solutions' },
-                { id: 'nordic-engineering', name: 'Nordic Engineering', code: 'nordic-engineering' }
-            ];
-            
-            // Filter companies based on search query
-            const filteredCompanies = companies.filter(company => 
-                company.name.toLowerCase().includes(query.toLowerCase()) || 
-                company.code.toLowerCase().includes(query.toLowerCase())
-            );
-            
-            if (filteredCompanies.length === 0) {
-                resultsContainer.innerHTML = `
-                    <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #9ca3af; text-align: center;">
-                        Ingen bedrifter funnet for "${query}"
-                    </div>
-                `;
-            } else {
-                resultsContainer.innerHTML = filteredCompanies.map(company => `
-                    <button onclick="selectFallbackCompany('${company.id}')" style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; cursor: pointer; text-align: left; transition: background 0.2s; hover:background: #4b5563;">
-                        <div style="font-weight: bold; margin-bottom: 0.25rem;">${company.name}</div>
-                        <div style="font-size: 0.875rem; color: #9ca3af;">${company.code}</div>
-                    </button>
-                `).join(');
-            }
-        }
-        
-        // Function to handle company selection
-        function selectFallbackCompany(companyId) {
-            console.log('Company selected:', companyId);
-            
-            // Get company name for display
-            const companies = [
-                { id: 'driftpro-40ccd', name: 'DriftPro' },
-                { id: 'test-company', name: 'Test Bedrift' },
-                { id: 'acme-corp', name: 'ACME Corporation' },
-                { id: 'tech-solutions', name: 'Tech Solutions AS' },
-                { id: 'nordic-engineering', name: 'Nordic Engineering' }
-            ];
-            const company = companies.find(c => c.id === companyId) || { name: companyId };
-            
-            // Update fallback screen to show login
-            const fallbackScreen = document.getElementById('fallbackScreen');
-            fallbackScreen.innerHTML = `
-                <div style="text-align: center; color: white; background: #1f2937; padding: 2rem; border-radius: 0.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.5); max-width: 400px; width: 100%;">
-                    <h1 style="font-size: 2rem; margin-bottom: 0.5rem; color: #3b82f6;">DriftPro Admin</h1>
-                    <p style="margin-bottom: 2rem; color: #9ca3af;">Logg inn for <span style="color: #3b82f6;">${company.name}</span></p>
-                    <form onsubmit="handleFallbackLogin(event)" style="display: flex; flex-direction: column; gap: 1rem;">
-                        <div>
-                            <label style="display: block; text-align: left; margin-bottom: 0.5rem; color: #d1d5db;">E-post</label>
-                            <input type="email" id="fallbackEmail" placeholder="Skriv inn e-post" required style="width: 100%; padding: 0.75rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; box-sizing: border-box;">
-                        </div>
-                        <div>
-                            <label style="display: block; text-align: left; margin-bottom: 0.5rem; color: #d1d5db;">Passord</label>
-                            <input type="password" id="fallbackPassword" placeholder="Skriv inn passord" required style="width: 100%; padding: 0.75rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; box-sizing: border-box;">
-                        </div>
-                        <button type="submit" style="padding: 0.75rem; background: #3b82f6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: bold; margin-top: 1rem;">Logg inn</button>
-                    </form>
-                    <button onclick="showFallbackCompanySelection()" style="margin-top: 1rem; padding: 0.5rem; background: none; border: none; color: #9ca3af; cursor: pointer; text-decoration: underline;">← Tilbake til bedriftssøk</button>
+            // Show loading state
+            resultsContainer.innerHTML = `
+                <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #9ca3af; text-align: center;">
+                    Søker etter bedrifter...
                 </div>
             `;
+            
+            try {
+                // Search in Firestore companies collection
+                const companiesRef = db.collection('companies');
+                const snapshot = await companiesRef.get();
+                
+                const companies = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    companies.push({
+                        id: doc.id,
+                        name: data.name || data.companyName || 'Ukjent navn',
+                        code: data.code || data.companyCode || doc.id
+                    });
+                });
+                
+                // Filter companies based on search query
+                const filteredCompanies = companies.filter(company => 
+                    company.name.toLowerCase().includes(query.toLowerCase()) || 
+                    company.code.toLowerCase().includes(query.toLowerCase())
+                );
+                
+                if (filteredCompanies.length === 0) {
+                    resultsContainer.innerHTML = `
+                        <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #9ca3af; text-align: center;">
+                            Ingen bedrifter funnet for "${query}"
+                        </div>
+                    `;
+                } else {
+                    resultsContainer.innerHTML = filteredCompanies.map(company => `
+                        <button onclick="selectFallbackCompany('${company.id}')" style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; cursor: pointer; text-align: left; transition: background 0.2s; hover:background: #4b5563;">
+                            <div style="font-weight: bold; margin-bottom: 0.25rem;">${company.name}</div>
+                            <div style="font-size: 0.875rem; color: #9ca3af;">${company.code}</div>
+                        </button>
+                    `).join(');
+                }
+                
+            } catch (error) {
+                console.error('Error searching companies:', error);
+                resultsContainer.innerHTML = `
+                    <div style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: #ef4444; text-align: center;">
+                        Feil ved søk etter bedrifter. Prøv igjen.
+                    </div>
+                `;
+            }
         }
                 
+        // Function to handle company selection
+        // Function to handle company selection
+        async function selectFallbackCompany(companyId) {
+            console.log('Company selected:', companyId);
+            
+            try {
+                // Get company data from Firestore
+                const companyDoc = await db.collection('companies').doc(companyId).get();
+                let companyName = companyId;
+                
+                if (companyDoc.exists) {
+                    const data = companyDoc.data();
+                    companyName = data.name || data.companyName || companyId;
+                }
+                
+                // Update fallback screen to show login
+                const fallbackScreen = document.getElementById('fallbackScreen');
+                fallbackScreen.innerHTML = `
+                    <div style="text-align: center; color: white; background: #1f2937; padding: 2rem; border-radius: 0.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.5); max-width: 400px; width: 100%;">
+                        <h1 style="font-size: 2rem; margin-bottom: 0.5rem; color: #3b82f6;">DriftPro Admin</h1>
+                        <p style="margin-bottom: 2rem; color: #9ca3af;">Logg inn for <span style="color: #3b82f6;">${companyName}</span></p>
+                        <form onsubmit="handleFallbackLogin(event)" style="display: flex; flex-direction: column; gap: 1rem;">
+                            <div>
+                                <label style="display: block; text-align: left; margin-bottom: 0.5rem; color: #d1d5db;">E-post</label>
+                                <input type="email" id="fallbackEmail" placeholder="Skriv inn e-post" required style="width: 100%; padding: 0.75rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; box-sizing: border-box;">
+                            </div>
+                            <div>
+                                <label style="display: block; text-align: left; margin-bottom: 0.5rem; color: #d1d5db;">Passord</label>
+                                <input type="password" id="fallbackPassword" placeholder="Skriv inn passord" required style="width: 100%; padding: 0.75rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; box-sizing: border-box;">
+                            </div>
+                            <button type="submit" style="padding: 0.75rem; background: #3b82f6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: bold; margin-top: 1rem;">Logg inn</button>
+                        </form>
+                        <button onclick="showFallbackCompanySelection()" style="margin-top: 1rem; padding: 0.5rem; background: none; border: none; color: #9ca3af; cursor: pointer; text-decoration: underline;">← Tilbake til bedriftssøk</button>
+                    </div>
+                `;
+                
+            } catch (error) {
+                console.error('Error getting company data:', error);
+                alert('Feil ved henting av bedriftsdata');
+            }
+        }
+                        
         // Function to show company selection again
         // Function to show company selection again
         function showFallbackCompanySelection() {
@@ -671,12 +758,41 @@
         }
                 
         // Function to handle login
-        function handleFallbackLogin(event) {
+        // Function to handle login with Firebase Auth
+        async function handleFallbackLogin(event) {
             event.preventDefault();
             const email = document.getElementById('fallbackEmail').value;
             const password = document.getElementById('fallbackPassword').value;
             
-            console.log('Login attempt:', email);
-            alert(`Logg inn forsøkt med e-post: ${email}\n\nI en full implementasjon ville dette logget inn brukeren.`);
+            // Show loading state
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Logger inn...';
+            
+            try {
+                // Try to sign in with Firebase Auth
+                const userCredential = await auth.signInWithEmailAndPassword(email, password);
+                const user = userCredential.user;
+                
+                console.log('Login successful:', user.email);
+                
+                // Hide fallback screen and show dashboard
+                document.getElementById('fallbackScreen').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+                
+                // Set current user and load data
+                currentUser = user;
+                document.getElementById('currentUser').textContent = user.email;
+                loadAllData();
+                
+            } catch (error) {
+                console.error('Login error:', error);
+                alert(`Innlogging feilet: ${error.message}`);
+            } finally {
+                // Re-enable button
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
         }
-    </script></html> 
+            </script></html> 
