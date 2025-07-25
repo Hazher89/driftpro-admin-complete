@@ -163,6 +163,9 @@
             document.getElementById('companySearchScreen').style.display = 'none';
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
+            
+            // Load dashboard stats
+            loadDashboardStats();
         }
 
         // Initialize page on load
@@ -210,7 +213,40 @@
         });
 
         // Function to show add user modal
-        function showAddUserModal() {
+        // Function to show add department modal
+        function showAddDepartmentModal() {
+            alert('Avdeling funksjonalitet kommer snart!');
+        }
+
+        // Function to show add deviation modal
+        function showAddDeviationModal() {
+            alert('Avvik funksjonalitet kommer snart!');
+        }
+
+        // Function to show add shift modal
+        function showAddShiftModal() {
+            alert('Skiftplaner funksjonalitet kommer snart!');
+        }
+
+        // Function to load dashboard stats
+        async function loadDashboardStats() {
+            try {
+                // Load employee count
+                const employeesSnapshot = await db.collection('users').where('companyId', '==', localStorage.getItem('selectedCompanyId') || 'driftpro-40ccd').get();
+                document.getElementById('totalEmployees').textContent = employeesSnapshot.size;
+
+                // Load department count
+                const departmentsSnapshot = await db.collection('departments').where('companyId', '==', localStorage.getItem('selectedCompanyId') || 'driftpro-40ccd').get();
+                document.getElementById('totalDepartments').textContent = departmentsSnapshot.size;
+
+                // Mock data for now
+                document.getElementById('openDeviations').textContent = '5';
+                document.getElementById('activeShifts').textContent = '3';
+            } catch (error) {
+                console.error('Error loading dashboard stats:', error);
+            }
+        }
+                function showAddUserModal() {
             document.getElementById('addUserModal').style.display = 'block';
             loadDepartments();
         }
@@ -368,6 +404,188 @@
     </div>
 
     <!-- Login Screen -->
+    <!-- Dashboard -->
+    <div id="dashboard" style="display: none; padding: 2rem;">
+        <div style="max-width: 1400px; margin: 0 auto;">
+            <!-- Header -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid #374151;">
+                <div>
+                    <h1 style="font-size: 2rem; font-weight: bold; color: white;">DriftPro Admin Panel</h1>
+                    <p style="color: #9ca3af; margin-top: 0.5rem;">Administrer bedrift, ansatte og drift</p>
+                </div>
+                <div style="display: flex; gap: 1rem; align-items: center;">
+                    <span id="userInfo" style="color: #9ca3af;">Logget inn som: <span id="userName" style="color: white; font-weight: bold;"></span></span>
+                    <button onclick="logout()" style="padding: 0.5rem 1rem; background: #ef4444; border: none; border-radius: 0.5rem; color: white; cursor: pointer; transition: background 0.2s;">Logg Ut</button>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+                <div style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); border-radius: 1rem; padding: 1.5rem; color: white;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h3 style="font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem;">Totale Ansatte</h3>
+                            <p style="font-size: 2rem; font-weight: bold;" id="totalEmployees">0</p>
+                        </div>
+                        <div style="font-size: 2rem;">👥</div>
+                    </div>
+                </div>
+                <div style="background: linear-gradient(135deg, #10b981, #059669); border-radius: 1rem; padding: 1.5rem; color: white;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h3 style="font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem;">Aktive Avdelinger</h3>
+                            <p style="font-size: 2rem; font-weight: bold;" id="totalDepartments">0</p>
+                        </div>
+                        <div style="font-size: 2rem;">🏢</div>
+                    </div>
+                </div>
+                <div style="background: linear-gradient(135deg, #f59e0b, #d97706); border-radius: 1rem; padding: 1.5rem; color: white;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h3 style="font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem;">Åpne Avvik</h3>
+                            <p style="font-size: 2rem; font-weight: bold;" id="openDeviations">0</p>
+                        </div>
+                        <div style="font-size: 2rem;">⚠️</div>
+                    </div>
+                </div>
+                <div style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); border-radius: 1rem; padding: 1.5rem; color: white;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h3 style="font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem;">Aktive Skift</h3>
+                            <p style="font-size: 2rem; font-weight: bold;" id="activeShifts">0</p>
+                        </div>
+                        <div style="font-size: 2rem;">🕐</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content Grid -->
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
+                <!-- Left Column -->
+                <div style="display: flex; flex-direction: column; gap: 2rem;">
+                    <!-- Quick Actions -->
+                    <div style="background: #1f2937; border-radius: 1rem; padding: 2rem;">
+                        <h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1.5rem; color: white;">Hurtig Handlinger</h2>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                            <button onclick="showAddUserModal()" style="padding: 1rem; background: #3b82f6; border: none; border-radius: 0.5rem; color: white; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="font-size: 1.25rem;">➕</span>
+                                <span>Legg til Ansatt</span>
+                            </button>
+                            <button onclick="showAddDepartmentModal()" style="padding: 1rem; background: #10b981; border: none; border-radius: 0.5rem; color: white; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="font-size: 1.25rem;">🏢</span>
+                                <span>Ny Avdeling</span>
+                            </button>
+                            <button onclick="showAddDeviationModal()" style="padding: 1rem; background: #f59e0b; border: none; border-radius: 0.5rem; color: white; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="font-size: 1.25rem;">⚠️</span>
+                                <span>Rapporter Avvik</span>
+                            </button>
+                            <button onclick="showAddShiftModal()" style="padding: 1rem; background: #8b5cf6; border: none; border-radius: 0.5rem; color: white; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="font-size: 1.25rem;">🕐</span>
+                                <span>Planlegg Skift</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity -->
+                    <div style="background: #1f2937; border-radius: 1rem; padding: 2rem;">
+                        <h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1.5rem; color: white;">Siste Aktivitet</h2>
+                        <div id="recentActivity" style="display: flex; flex-direction: column; gap: 1rem;">
+                            <div style="padding: 1rem; background: #374151; border-radius: 0.5rem; border-left: 4px solid #3b82f6;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <p style="font-weight: bold; color: white;">Ny ansatt registrert</p>
+                                        <p style="color: #9ca3af; font-size: 0.875rem;">John Doe ble lagt til i IT-avdelingen</p>
+                                    </div>
+                                    <span style="color: #9ca3af; font-size: 0.875rem;">2 min siden</span>
+                                </div>
+                            </div>
+                            <div style="padding: 1rem; background: #374151; border-radius: 0.5rem; border-left: 4px solid #f59e0b;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <p style="font-weight: bold; color: white;">Avvik rapportert</p>
+                                        <p style="color: #9ca3af; font-size: 0.875rem;">Sikkerhetsbrudd i bygg A</p>
+                                    </div>
+                                    <span style="color: #9ca3af; font-size: 0.875rem;">15 min siden</span>
+                                </div>
+                            </div>
+                            <div style="padding: 1rem; background: #374151; border-radius: 0.5rem; border-left: 4px solid #10b981;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <p style="font-weight: bold; color: white;">Skift endret</p>
+                                        <p style="color: #9ca3af; font-size: 0.875rem;">Natteskift for produksjon oppdatert</p>
+                                    </div>
+                                    <span style="color: #9ca3af; font-size: 0.875rem;">1 time siden</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column -->
+                <div style="display: flex; flex-direction: column; gap: 2rem;">
+                    <!-- Navigation Cards -->
+                    <div style="background: #1f2937; border-radius: 1rem; padding: 2rem;">
+                        <h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1.5rem; color: white;">Navigasjon</h2>
+                        <div style="display: flex; flex-direction: column; gap: 1rem;">
+                            <a href="/departments.html" style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; text-decoration: none; transition: background 0.2s; display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="font-size: 1.25rem;">��</span>
+                                <span>Avdelinger</span>
+                                <span style="margin-left: auto; color: #9ca3af;">→</span>
+                            </a>
+                            <a href="/employees.html" style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; text-decoration: none; transition: background 0.2s; display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="font-size: 1.25rem;">👥</span>
+                                <span>Ansatte</span>
+                                <span style="margin-left: auto; color: #9ca3af;">→</span>
+                            </a>
+                            <a href="/deviations.html" style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; text-decoration: none; transition: background 0.2s; display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="font-size: 1.25rem;">⚠️</span>
+                                <span>Avvik</span>
+                                <span style="margin-left: auto; color: #9ca3af;">→</span>
+                            </a>
+                            <a href="/shifts.html" style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; text-decoration: none; transition: background 0.2s; display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="font-size: 1.25rem;">🕐</span>
+                                <span>Skiftplaner</span>
+                                <span style="margin-left: auto; color: #9ca3af;">→</span>
+                            </a>
+                            <a href="/chat.html" style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; text-decoration: none; transition: background 0.2s; display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="font-size: 1.25rem;">💬</span>
+                                <span>Chat</span>
+                                <span style="margin-left: auto; color: #9ca3af;">→</span>
+                            </a>
+                            <a href="/documents.html" style="padding: 1rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.5rem; color: white; text-decoration: none; transition: background 0.2s; display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="font-size: 1.25rem;">��</span>
+                                <span>Dokumenter</span>
+                                <span style="margin-left: auto; color: #9ca3af;">→</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Quick Stats -->
+                    <div style="background: #1f2937; border-radius: 1rem; padding: 2rem;">
+                        <h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1.5rem; color: white;">Hurtig Statistikk</h2>
+                        <div style="display: flex; flex-direction: column; gap: 1rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: #374151; border-radius: 0.5rem;">
+                                <span style="color: #9ca3af;">Dagens skift</span>
+                                <span style="color: white; font-weight: bold;">3 aktive</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: #374151; border-radius: 0.5rem;">
+                                <span style="color: #9ca3af;">Ubehandlede avvik</span>
+                                <span style="color: white; font-weight: bold;">5 stk</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: #374151; border-radius: 0.5rem;">
+                                <span style="color: #9ca3af;">Aktive chatrom</span>
+                                <span style="color: white; font-weight: bold;">2 stk</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: #374151; border-radius: 0.5rem;">
+                                <span style="color: #9ca3af;">Nye dokumenter</span>
+                                <span style="color: white; font-weight: bold;">12 stk</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     <div id="loginScreen" style="display: none; flex-direction: column; justify-content: center; align-items: center; height: 100vh; background: #111827; padding: 2rem;">
         <div style="max-width: 400px; width: 100%;">
             <h1 style="font-size: 2rem; font-weight: bold; margin-bottom: 2rem; text-align: center;">Logg Inn</h1>
@@ -379,34 +597,6 @@
         </div>
     </div>
 
-    <!-- Dashboard -->
-    <div id="dashboard" style="display: none; padding: 2rem;">
-        <div style="max-width: 1200px; margin: 0 auto;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-                <h1 style="font-size: 2rem; font-weight: bold;">DriftPro Admin Panel</h1>
-                <div style="display: flex; gap: 1rem; align-items: center;">
-                    <span id="userInfo">Logget inn som: <span id="userName"></span></span>
-                    <button onclick="logout()" style="padding: 0.5rem 1rem; background: #ef4444; border: none; border-radius: 0.5rem; color: white; cursor: pointer;">Logg Ut</button>
-                </div>
-            </div>
-
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
-                <!-- Users Card -->
-                <div style="background: #1f2937; border-radius: 1rem; padding: 2rem;">
-                    <h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem;">Ansatte</h2>
-                    <p style="color: #9ca3af; margin-bottom: 1rem;">Administrer ansatte og brukere</p>
-                    <button onclick="showAddUserModal()" style="padding: 0.75rem 1.5rem; background: #3b82f6; border: none; border-radius: 0.5rem; color: white; cursor: pointer;">Legg til Ansatt</button>
-                </div>
-
-                <!-- Departments Card -->
-                <div style="background: #1f2937; border-radius: 1rem; padding: 2rem;">
-                    <h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem;">Avdelinger</h2>
-                    <p style="color: #9ca3af; margin-bottom: 1rem;">Administrer avdelinger og organisasjon</p>
-                    <a href="/departments.html" style="padding: 0.75rem 1.5rem; background: #3b82f6; border: none; border-radius: 0.5rem; color: white; cursor: pointer; text-decoration: none; display: inline-block;">Gå til Avdelinger</a>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Add User Modal -->
     <div id="addUserModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 1000;">
