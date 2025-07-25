@@ -46,7 +46,7 @@
                 currentCompanyId = userData.companyId;
                 
                 document.getElementById('userName').textContent = currentUser.email;
-                console.log("About to load departments"); loadDepartments();
+                loadDepartments();
                 loadEmployees();
             } catch (error) {
                 console.error('Error loading user data:', error);
@@ -55,7 +55,7 @@
 
         async function loadDepartments() {
             try {
-                console.log("Fetching departments..."); const snapshot = await db.collection('departments')
+                const snapshot = await db.collection('departments')
                     .where('companyId', '==', currentCompanyId)
                     .orderBy('name')
                     .get();
@@ -68,13 +68,13 @@
                 renderDepartments();
             } catch (error) {
                 console.error('Error loading departments:', error);
-                showNotification("Feil ved lasting av avdelinger: " + error.message, "error");
+                showNotification('Feil ved lasting av avdelinger', 'error');
             }
         }
 
         async function loadEmployees() {
             try {
-                console.log("Fetching departments..."); const snapshot = await db.collection('users')
+                const snapshot = await db.collection('users')
                     .where('companyId', '==', currentCompanyId)
                     .where('role', 'in', ['employee', 'admin'])
                     .orderBy('name')
@@ -224,7 +224,7 @@
             const leaderId = document.getElementById('departmentLeader').value;
             
             if (!name) {
-                showNotification("Feil ved lasting av avdelinger: " + error.message, "error");
+                showNotification('Avdelingsnavn er påkrevd', 'error');
                 return;
             }
             
@@ -242,9 +242,9 @@
                 
                 showNotification('Avdeling opprettet!', 'success');
                 closeCreateModal();
-                console.log("About to load departments"); loadDepartments();
+                loadDepartments();
             } catch (error) {
-                showNotification("Feil ved lasting av avdelinger: " + error.message, "error");
+                showNotification('Feil ved opprettelse av avdeling: ' + error.message, 'error');
             }
         }
 
@@ -257,9 +257,9 @@
                 await db.collection('departments').doc(departmentId).delete();
                 
                 showNotification('Avdeling slettet!', 'success');
-                console.log("About to load departments"); loadDepartments();
+                loadDepartments();
             } catch (error) {
-                showNotification("Feil ved lasting av avdelinger: " + error.message, "error");
+                showNotification('Feil ved sletting av avdeling: ' + error.message, 'error');
             }
         }
 
