@@ -125,45 +125,56 @@
                     createdBy: auth.currentUser.uid
                 });
                 
-                // Generate unique invitation link
-                const invitationId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-                const invitationLink = `${window.location.origin}/setup-password.html?id=${invitationId}&company=${companyRef.id}&email=${adminEmail}&name=${adminName}`;
+                // Create user in Firebase Auth with temporary password
+                const tempPassword = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
                 
-                // Store invitation data
-                await db.collection('invitations').doc(invitationId).set({
-                    companyId: companyRef.id,
-                    companyName: name,
-                    adminName: adminName,
-                    adminEmail: adminEmail,
-                    invitationLink: invitationLink,
-                    createdAt: new Date(),
-                    createdBy: auth.currentUser.uid,
-                    isUsed: false
-                });
-                
-                // Show invitation details modal
-                document.getElementById('invitationLink').textContent = invitationLink;
-                document.getElementById('invitationEmail').textContent = adminEmail;
-                document.getElementById('invitationModal').style.display = 'flex';
+                try {
+                    // Create user in Firebase Auth
+                    const userCredential = await firebase.auth().createUserWithEmailAndPassword(adminEmail, tempPassword);
+                    const newUser = userCredential.user;
+                    
+                    // Update user profile with name
+                    await newUser.updateProfile({
+                        displayName: adminName
+                    });
+                    
+                    // Send password reset email (this will allow them to set their own password)
+                    await firebase.auth().sendPasswordResetEmail(adminEmail);
+                    
+                    // Store user data in Firestore
+                    await db.collection('users').doc(newUser.uid).set({
+                        name: adminName,
+                        email: adminEmail,
+                        companyId: companyRef.id,
+                        role: 'admin',
+                        createdAt: new Date(),
+                        createdBy: auth.currentUser.uid
+                    });
+                    
+                    showNotification(`Bedrift opprettet! Passord reset e-post sendt til ${adminEmail}`, 'success');
+                    
+                } catch (authError) {
+                    console.error('Auth error:', authError);
+                    
+                    // If user already exists, just send password reset
+                    if (authError.code === 'auth/email-already-in-use') {
+                        try {
+                            await firebase.auth().sendPasswordResetEmail(adminEmail);
+                            showNotification(`Passord reset e-post sendt til ${adminEmail}`, 'success');
+                        } catch (resetError) {
+                            console.error('Password reset error:', resetError);
+                            showNotification('Kunne ikke sende passord reset e-post', 'error');
+                        }
+                    } else {
+                        showNotification('Feil ved opprettelse av bruker: ' + authError.message, 'error');
+                    }
+                }
                 
                 hideCreateCompanyModal();
                 loadAllCompanies();
             } catch (error) {
                 showNotification('Feil ved opprettelse av bedrift: ' + error.message, 'error');
             }
-        }
-
-        function copyInvitationLink() {
-            const link = document.getElementById('invitationLink').textContent;
-            navigator.clipboard.writeText(link).then(() => {
-                showNotification('Invitasjonslenke kopiert til utklippstavle!', 'success');
-            }).catch(() => {
-                showNotification('Kunne ikke kopiere lenke automatisk. Kopier manuelt.', 'error');
-            });
-        }
-
-        function hideInvitationModal() {
-            document.getElementById('invitationModal').style.display = 'none';
         }
 
         function editCompany(companyId) {
@@ -195,25 +206,50 @@
             }
             
             try {
-                // Generate unique invitation link
-                const invitationId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-                const invitationLink = `${window.location.origin}/setup-password.html?id=${invitationId}&company=${companyId}&email=${email}&name=${name}`;
+                // Create user in Firebase Auth with temporary password
+                const tempPassword = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
                 
-                // Store invitation data
-                await db.collection('invitations').doc(invitationId).set({
-                    companyId: companyId,
-                    adminName: name,
-                    adminEmail: email,
-                    invitationLink: invitationLink,
-                    createdAt: new Date(),
-                    createdBy: auth.currentUser.uid,
-                    isUsed: false
-                });
-                
-                // Show invitation details modal
-                document.getElementById('invitationLink').textContent = invitationLink;
-                document.getElementById('invitationEmail').textContent = email;
-                document.getElementById('invitationModal').style.display = 'flex';
+                try {
+                    // Create user in Firebase Auth
+                    const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, tempPassword);
+                    const newUser = userCredential.user;
+                    
+                    // Update user profile with name
+                    await newUser.updateProfile({
+                        displayName: name
+                    });
+                    
+                    // Send password reset email
+                    await firebase.auth().sendPasswordResetEmail(email);
+                    
+                    // Store user data in Firestore
+                    await db.collection('users').doc(newUser.uid).set({
+                        name: name,
+                        email: email,
+                        companyId: companyId,
+                        role: 'admin',
+                        createdAt: new Date(),
+                        createdBy: auth.currentUser.uid
+                    });
+                    
+                    showNotification(`Admin bruker opprettet! Passord reset e-post sendt til ${email}`, 'success');
+                    
+                } catch (authError) {
+                    console.error('Auth error:', authError);
+                    
+                    // If user already exists, just send password reset
+                    if (authError.code === 'auth/email-already-in-use') {
+                        try {
+                            await firebase.auth().sendPasswordResetEmail(email);
+                            showNotification(`Passord reset e-post sendt til ${email}`, 'success');
+                        } catch (resetError) {
+                            console.error('Password reset error:', resetError);
+                            showNotification('Kunne ikke sende passord reset e-post', 'error');
+                        }
+                    } else {
+                        showNotification('Feil ved opprettelse av bruker: ' + authError.message, 'error');
+                    }
+                }
                 
                 hideCreateAdminModal();
                 loadAllCompanies();
@@ -359,31 +395,6 @@
                     </button>
                 </div>
             </form>
-        </div>
-    </div>
-
-    <!-- Invitation Modal -->
-    <div id="invitationModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" style="display: none;">
-        <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg">
-            <h3 class="text-2xl font-bold text-gray-800 mb-6">Invitasjonslenke Opprettet</h3>
-            <div class="space-y-6">
-                <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <h4 class="font-semibold text-blue-800 mb-2">Send denne lenken til admin-brukeren:</h4>
-                    <p class="text-blue-700 text-sm mb-2"><strong>E-post:</strong> <span id="invitationEmail"></span></p>
-                    <div class="bg-white p-3 border border-blue-300 rounded-lg">
-                        <p id="invitationLink" class="text-sm text-gray-800 break-all"></p>
-                    </div>
-                </div>
-                
-                <div class="flex space-x-4">
-                    <button onclick="copyInvitationLink()" class="flex-1 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200">
-                        Kopier Lenke
-                    </button>
-                    <button onclick="hideInvitationModal()" class="flex-1 py-3 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition-all duration-200">
-                        Lukk
-                    </button>
-                </div>
-            </div>
         </div>
     </div>
 
