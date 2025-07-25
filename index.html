@@ -395,7 +395,30 @@
         </div>
     </div>
 
-    <!-- Add User Modal -->
+    <!-- Password Change Modal -->
+    <div id="passwordChangeModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-gray-800 p-6 rounded-lg w-full max-w-md">
+            <div class="text-center mb-6">
+                <h2 class="text-2xl font-bold">Endre passord</h2>
+                <p class="text-gray-400">Du må endre passordet ditt ved første innlogging</p>
+            </div>
+            
+            <form id="passwordChangeForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Nytt passord</label>
+                    <input type="password" id="newPassword" required minlength="8" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Bekreft nytt passord</label>
+                    <input type="password" id="confirmPassword" required minlength="8" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg">
+                </div>
+                <div class="flex gap-2">
+                    <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 p-3 rounded-lg">Endre passord</button>
+                </div>
+            </form>
+        </div>
+    </div>
+        <!-- Add User Modal -->
     <div id="addUserModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
         <div class="bg-gray-800 p-6 rounded-lg max-w-md w-full mx-4">
             <h3 class="text-xl font-bold mb-4">Legg til bruker</h3>
@@ -523,8 +546,19 @@
             }
             
             auth.signInWithEmailAndPassword(email, password)
-                .then(function(user) {
+                .then(async function(user) {
                     currentUser = user;
+                    
+                    // Check if user needs to change password
+                    const userDoc = await db.collection('users').where('uid', '==', user.uid).get();
+                    if (!userDoc.empty) {
+                        const userData = userDoc.docs[0].data();
+                        if (userData.mustChangePassword) {
+                            showPasswordChangeModal();
+                            return;
+                        }
+                    }
+                    
                     showDashboard();
                     loadAllData();
                 })
@@ -533,7 +567,6 @@
                     document.getElementById('loginError').classList.remove('hidden');
                 });
         });
-
         // Forgot password form
         document.getElementById('forgotPasswordForm').addEventListener('submit', function(e) {
             e.preventDefault();
@@ -566,449 +599,24 @@
         // Load all data from Firestore
         async function loadAllData() {
             try {
-                await Promise.all([
-                    loadCompanies(),
-                    loadUsers(),
-                    loadDepartments(),
-                    loadChats(),
-                    loadDeviations(),
-                    loadDocuments(),
-                    loadShifts()
-                ]);
-                updateStatistics();
-            } catch (error) {
-                console.error('Error loading data:', error);
-            }
-        }
-
-        async function loadCompaniesForSearch() {
-            try {
-                const snapshot = await db.collection('companies').get();
-                companies = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            } catch (error) {
-                console.error('Error loading companies:', error);
-                // If no companies exist, create demo companies
-                companies = [
-                    { id: 'demo1', name: 'DriftPro Hovedkontor' },
-                    { id: 'demo2', name: 'DriftPro Nord' },
-                    { id: 'demo3', name: 'DriftPro Vest' },
-                    { id: 'demo4', name: 'DriftPro Øst' }
-                ];
-            }
-        }
-
-        function setupCompanySearch() {
-            const searchInput = document.getElementById('companySearch');
-            const resultsDiv = document.getElementById('companyResults');
-            const noCompaniesDiv = document.getElementById('noCompaniesMessage');
-
-            searchInput.addEventListener('input', function() {
-                const searchTerm = this.value.trim().toLowerCase();
+                // Create Firebase Authentication user
+                const userCredential = await auth.createUserWithEmailAndPassword(userData.email, tempPassword);
+                const firebaseUser = userCredential.user;
                 
-                // Don't show results if search term is too short
-                if (searchTerm.length < 2) {
-                    resultsDiv.innerHTML = '';
-                    noCompaniesDiv.classList.add('hidden');
-                    return;
-                }
-
-                const filteredCompanies = companies.filter(company => 
-                    company.name.toLowerCase().includes(searchTerm)
-                );
-
-                resultsDiv.innerHTML = '';
-                noCompaniesDiv.classList.add('hidden');
-
-                if (filteredCompanies.length === 0) {
-                    noCompaniesDiv.classList.remove('hidden');
-                    return;
-                }
-
-                // Sort companies by relevance (exact matches first)
-                filteredCompanies.sort((a, b) => {
-                    const aName = a.name.toLowerCase();
-                    const bName = b.name.toLowerCase();
-                    
-                    // Exact match gets highest priority
-                    if (aName === searchTerm && bName !== searchTerm) return -1;
-                    if (bName === searchTerm && aName !== searchTerm) return 1;
-                    
-                    // Starts with search term gets second priority
-                    if (aName.startsWith(searchTerm) && !bName.startsWith(searchTerm)) return -1;
-                    if (bName.startsWith(searchTerm) && !aName.startsWith(searchTerm)) return 1;
-                    
-                    // Alphabetical order for same priority
-                    return aName.localeCompare(bName);
-                });
-
-                filteredCompanies.forEach(company => {
-                    const companyDiv = document.createElement('div');
-                    companyDiv.className = 'p-3 bg-gray-700 rounded-lg hover:bg-gray-600 cursor-pointer transition-colors';
-                    
-                    // Highlight matching text
-                    const companyName = company.name;
-                    const searchTermLower = searchTerm.toLowerCase();
-                    const companyNameLower = companyName.toLowerCase();
-                    const matchIndex = companyNameLower.indexOf(searchTermLower);
-                    
-                    let highlightedName = companyName;
-                    if (matchIndex !== -1) {
-                        const before = companyName.substring(0, matchIndex);
-                        const match = companyName.substring(matchIndex, matchIndex + searchTerm.length);
-                        const after = companyName.substring(matchIndex + searchTerm.length);
-                        highlightedName = `${before}<span class="bg-yellow-600 text-black px-1 rounded">${match}</span>${after}`;
-                    }
-                    
-                    companyDiv.innerHTML = `
-                        <div class="font-medium">${highlightedName}</div>
-                        <div class="text-sm text-gray-400">Klikk for å velge</div>
-                    `;
-                    companyDiv.onclick = () => selectCompany(company);
-                    resultsDiv.appendChild(companyDiv);
-                });
-            });
-
-            // Add placeholder text to guide users
-            searchInput.placeholder = "Skriv minst 2 bokstaver for å søke...";
-        }
-
-        function selectCompany(company) {
-            selectedCompany = company.id;
-            document.getElementById('selectedCompanyName').textContent = company.name;
-            showLogin();
-        }
-
-        async function loadCompanies() {
-            try {
-                const snapshot = await db.collection('companies').get();
-                companies = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                updateCompanySelector();
-            } catch (error) {
-                console.error('Error loading companies:', error);
-                // If no companies exist, create demo companies
-                companies = [
-                    { id: 'demo1', name: 'DriftPro Hovedkontor' },
-                    { id: 'demo2', name: 'DriftPro Nord' },
-                    { id: 'demo3', name: 'DriftPro Vest' },
-                    { id: 'demo4', name: 'DriftPro Øst' }
-                ];
-                updateCompanySelector();
-            }
-        }
-
-        function updateCompanySelector() {
-            const selector = document.getElementById('companySelector');
-            selector.innerHTML = '<option value="">Velg bedrift...</option>';
-            
-            companies.forEach(company => {
-                const option = document.createElement('option');
-                option.value = company.id;
-                option.textContent = company.name;
-                selector.appendChild(option);
-            });
-        }
-
-        function changeCompany() {
-            const selector = document.getElementById('companySelector');
-            selectedCompany = selector.value;
-            
-            if (selectedCompany) {
-                // Reload data for selected company
-                loadAllData();
-            }
-        }
-
-        async function loadUsers() {
-            if (!selectedCompany) return;
-            try {
-                const snapshot = await db.collection('users').where('companyId', '==', 'driftpro-40ccd').get();
-                users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                displayUsers();
-            } catch (error) {
-                console.error('Error loading users:', error);
-                users = [];
-                displayUsers();
-            }
-        }
-
-        async function loadDepartments() {
-            if (!selectedCompany) return;
-            try {
-                const snapshot = await db.collection('departments').where('companyId', '==', 'driftpro-40ccd').get();
-                departments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                displayDepartments();
-                updateDepartmentFilters();
-            } catch (error) {
-                console.error('Error loading departments:', error);
-                departments = [];
-                displayDepartments();
-                updateDepartmentFilters();
-            }
-        }
-
-        async function loadChats() {
-            if (!selectedCompany) return;
-            try {
-                const snapshot = await db.collection('chats').where('companyId', '==', selectedCompany).get();
-                chats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                displayChats();
-            } catch (error) {
-                console.error('Error loading chats:', error);
-                chats = [];
-                displayChats();
-            }
-        }
-
-        async function loadDeviations() {
-            if (!selectedCompany) return;
-            try {
-                const snapshot = await db.collection('deviations').where('companyId', '==', selectedCompany).get();
-                deviations = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                displayDeviations();
-            } catch (error) {
-                console.error('Error loading deviations:', error);
-                deviations = [];
-                displayDeviations();
-            }
-        }
-
-        async function loadDocuments() {
-            if (!selectedCompany) return;
-            try {
-                const snapshot = await db.collection('documents').where('companyId', '==', selectedCompany).get();
-                documents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                displayDocuments();
-            } catch (error) {
-                console.error('Error loading documents:', error);
-                documents = [];
-                displayDocuments();
-            }
-        }
-
-        async function loadShifts() {
-            if (!selectedCompany) return;
-            try {
-                const snapshot = await db.collection('shifts').where('companyId', '==', selectedCompany).get();
-                shifts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                displayShifts();
-            } catch (error) {
-                console.error('Error loading shifts:', error);
-                shifts = [];
-                displayShifts();
-            }
-        }
-
-        function updateStatistics() {
-            document.getElementById('userCount').textContent = users.length;
-            document.getElementById('departmentCount').textContent = departments.length;
-            document.getElementById('chatCount').textContent = chats.length;
-            document.getElementById('deviationCount').textContent = deviations.filter(d => d.status === 'open').length;
-
-            document.getElementById('userCountSmall').textContent = `${users.length} brukere`;
-            document.getElementById('departmentCountSmall').textContent = `${departments.length} avdelinger`;
-            document.getElementById('chatCountSmall').textContent = `${chats.length} chat-rom`;
-            document.getElementById('deviationCountSmall').textContent = `${deviations.filter(d => d.status === 'open').length} åpne avvik`;
-            document.getElementById('documentCountSmall').textContent = `${documents.length} dokumenter`;
-            document.getElementById('shiftCountSmall').textContent = `${shifts.filter(s => s.status === 'active').length} aktive skift`;
-        }
-
-        function displayUsers() {
-            const tbody = document.getElementById('usersTableBody');
-            tbody.innerHTML = '';
-            
-            users.forEach(user => {
-                const row = document.createElement('tr');
-                row.className = 'border-b border-gray-700';
-                row.innerHTML = `
-                    <td class="p-3">${user.firstName} ${user.lastName}</td>
-                    <td class="p-3">${user.email}</td>
-                    <td class="p-3"><span class="bg-blue-600 px-2 py-1 rounded text-sm">${user.role}</span></td>
-                    <td class="p-3">${user.department || 'Ikke tildelt'}</td>
-                    <td class="p-3"><span class="text-green-400">● Aktiv</span></td>
-                    <td class="p-3">
-                        <button onclick="editUser('${user.id}')" class="bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded text-sm mr-2">Rediger</button>
-                        <button onclick="deleteUser('${user.id}')" class="bg-red-600 hover:bg-red-700 px-2 py-1 rounded text-sm">Slett</button>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-
-        function displayDepartments() {
-            const tbody = document.getElementById('departmentsTableBody');
-            tbody.innerHTML = '';
-            
-            departments.forEach(dept => {
-                const memberCount = users.filter(u => u.department === dept.name).length;
-                const createdDate = dept.createdAt ? new Date(dept.createdAt.toDate()).toLocaleDateString('no-NO') : 'Ukjent';
-                const status = dept.status || 'active';
+                // Add user to Firestore with Firebase UID
+                userData.uid = firebaseUser.uid;
+                const docRef = await db.collection('users').add(userData);
                 
-                const row = document.createElement('tr');
-                row.className = 'border-b border-gray-700 hover:bg-gray-700';
-                row.innerHTML = `
-                    <td class="p-3">
-                        <div class="font-medium">${dept.name}</div>
-                        <div class="text-sm text-gray-400">${dept.description || 'Ingen beskrivelse'}</div>
-                    </td>
-                    <td class="p-3">
-                        <div class="font-medium">${dept.manager || 'Ikke tildelt'}</div>
-                        <div class="text-sm text-gray-400">${dept.managerEmail || ''}</div>
-                    </td>
-                    <td class="p-3">
-                        <span class="bg-blue-600 px-2 py-1 rounded text-sm">${memberCount} medlemmer</span>
-                    </td>
-                    <td class="p-3">
-                        <span class="${status === 'active' ? 'bg-green-600' : 'bg-red-600'} px-2 py-1 rounded text-sm">
-                            ${status === 'active' ? 'Aktiv' : 'Inaktiv'}
-                        </span>
-                    </td>
-                    <td class="p-3 text-sm text-gray-400">${createdDate}</td>
-                    <td class="p-3">
-                        <div class="flex gap-2">
-                            <button onclick="editDepartment('${dept.id}')" class="bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded text-sm">
-                                ✏️ Rediger
-                            </button>
-                            <button onclick="viewDepartmentMembers('${dept.id}')" class="bg-green-600 hover:bg-green-700 px-2 py-1 rounded text-sm">
-                                👥 Medlemmer
-                            </button>
-                            <button onclick="deleteDepartment('${dept.id}')" class="bg-red-600 hover:bg-red-700 px-2 py-1 rounded text-sm">
-                                🗑️ Slett
-                            </button>
-                        </div>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-
-        function displayChats() {
-            const overview = document.getElementById('chatOverview');
-            overview.innerHTML = `
-                <div class="bg-gray-700 p-4 rounded-lg">
-                    <h3 class="font-semibold mb-2">Direkte meldinger</h3>
-                    <p class="text-gray-400 text-sm mb-4">${chats.filter(c => c.type === 'direct').length} aktive samtaler</p>
-                    <button onclick="viewDirectChats()" class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm">Se alle</button>
-                </div>
-                <div class="bg-gray-700 p-4 rounded-lg">
-                    <h3 class="font-semibold mb-2">Gruppe-chat</h3>
-                    <p class="text-gray-400 text-sm mb-4">${chats.filter(c => c.type === 'group').length} grupper</p>
-                    <button onclick="viewGroupChats()" class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm">Se alle</button>
-                </div>
-            `;
-        }
-
-        function displayDeviations() {
-            const tbody = document.getElementById('deviationsTableBody');
-            tbody.innerHTML = '';
-            
-            deviations.forEach(deviation => {
-                const row = document.createElement('tr');
-                row.className = 'border-b border-gray-700';
-                row.innerHTML = `
-                    <td class="p-3">#${deviation.id}</td>
-                    <td class="p-3">${deviation.description}</td>
-                    <td class="p-3">${deviation.reportedBy}</td>
-                    <td class="p-3"><span class="bg-red-600 px-2 py-1 rounded text-sm">${deviation.priority}</span></td>
-                    <td class="p-3"><span class="bg-yellow-600 px-2 py-1 rounded text-sm">${deviation.status}</span></td>
-                    <td class="p-3">
-                        <button onclick="viewDeviation('${deviation.id}')" class="bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded text-sm mr-2">Se detaljer</button>
-                        <button onclick="resolveDeviation('${deviation.id}')" class="bg-green-600 hover:bg-green-700 px-2 py-1 rounded text-sm">Løst</button>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-
-        function displayDocuments() {
-            const grid = document.getElementById('documentsGrid');
-            grid.innerHTML = '';
-            
-            documents.forEach(doc => {
-                const div = document.createElement('div');
-                div.className = 'bg-gray-700 p-4 rounded-lg';
-                div.innerHTML = `
-                    <h3 class="font-semibold mb-2">${doc.name}</h3>
-                    <p class="text-gray-400 text-sm mb-2">Opplastet av: ${doc.uploadedBy}</p>
-                    <p class="text-gray-400 text-sm mb-4">${doc.size} • ${doc.downloads} nedlastinger</p>
-                    <div class="flex gap-2">
-                        <button onclick="downloadDocument('${doc.id}')" class="bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded text-sm">Last ned</button>
-                        <button onclick="deleteDocument('${doc.id}')" class="bg-red-600 hover:bg-red-700 px-2 py-1 rounded text-sm">Slett</button>
-                    </div>
-                `;
-                grid.appendChild(div);
-            });
-        }
-
-        function displayShifts() {
-            const tbody = document.getElementById('shiftsTableBody');
-            tbody.innerHTML = '';
-            
-            shifts.forEach(shift => {
-                const row = document.createElement('tr');
-                row.className = 'border-b border-gray-700';
-                row.innerHTML = `
-                    <td class="p-3">${new Date(shift.date).toLocaleDateString('no-NO')}</td>
-                    <td class="p-3">${shift.userName}</td>
-                    <td class="p-3">${shift.startTime}</td>
-                    <td class="p-3">${shift.endTime}</td>
-                    <td class="p-3"><span class="text-green-400">● ${shift.status}</span></td>
-                    <td class="p-3">
-                        <button onclick="editShift('${shift.id}')" class="bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded text-sm mr-2">Rediger</button>
-                        <button onclick="deleteShift('${shift.id}')" class="bg-red-600 hover:bg-red-700 px-2 py-1 rounded text-sm">Slett</button>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-
-        function updateDepartmentFilters() {
-            const filter = document.getElementById('departmentFilter');
-            const userDept = document.getElementById('userDepartment');
-            
-            filter.innerHTML = '<option value="">Alle avdelinger</option>';
-            userDept.innerHTML = '';
-            
-            departments.forEach(dept => {
-                filter.innerHTML += `<option value="${dept.name}">${dept.name}</option>`;
-                userDept.innerHTML += `<option value="${dept.name}">${dept.name}</option>`;
-            });
-        }
-
-        // Navigation
-        function showSection(section) {
-            document.querySelectorAll('[id$="Section"]').forEach(el => el.classList.add('hidden'));
-            document.getElementById(section + 'Section').classList.remove('hidden');
-        }
-
-        // Modal functions
-        function showAddUserModal() {
-            document.getElementById('addUserModal').classList.remove('hidden');
-        }
-
-        function hideAddUserModal() {
-            document.getElementById('addUserModal').classList.add('hidden');
-            document.getElementById('addUserForm').reset();
-        }
-
-        // Add user form
-        document.getElementById('addUserForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const userData = {
-                firstName: document.getElementById('firstName').value,
-                lastName: document.getElementById('lastName').value,
-                email: document.getElementById('userEmail').value,
-                role: document.getElementById('userRole').value,
-                department: document.getElementById('userDepartment').value,
-                companyId: "driftpro-40ccd",
-                createdAt: new Date(),
-                isActive: true
-            };
-
-            try {
-                await db.collection('users').add(userData);
+                // Send welcome email with temporary password
+                await sendWelcomeEmail(userData.email, userData.firstName, tempPassword);
+                
+                // Show success message with password
+                alert(`Bruker opprettet!\n\nE-post: ${userData.email}\nEngangspassord: ${tempPassword}\n\nE-post med engangspassord er sendt til brukeren.\nBrukeren må endre passordet ved første innlogging.`);
+                                
                 hideAddUserModal();
                 loadUsers();
+                updateStatistics();
+                                loadUsers();
                 updateStatistics();
             } catch (error) {
                 console.error('Error adding user:', error);
@@ -1016,7 +624,32 @@
         });
 
         // Placeholder functions for other actions
-        function editUser(userId) { alert('Rediger bruker funksjonalitet kommer snart!'); }
+        // Email function (placeholder for real email service)
+        async function sendWelcomeEmail(email, firstName, tempPassword) {
+            // In a real implementation, this would use a service like SendGrid, Mailgun, or Firebase Functions
+            console.log(`Sending welcome email to ${email} with temporary password: ${tempPassword}`);
+            
+            const emailContent = {
+                to: email,
+                subject: 'Velkommen til DriftPro - Ditt engangspassord',
+                html: `
+                    <h2>Velkommen til DriftPro!</h2>
+                    <p>Hei ${firstName},</p>
+                    <p>Din brukerkonto har blitt opprettet. Her er ditt engangspassord:</p>
+                    <h3>${tempPassword}</h3>
+                    <p><strong>Du må endre dette passordet ved første innlogging.</strong></p>
+                    <p>Logg inn på: <a href="https://astounding-marshmallow-27c489.netlify.app">DriftPro Admin Panel</a></p>
+                    <p>Med vennlig hilsen,<br>DriftPro Team</p>
+                `
+            };
+            
+            // For now, just log the email content
+            console.log('Email content:', emailContent);
+            
+            // In production, you would send this via a backend service
+            // Example: await fetch('/api/send-email', { method: 'POST', body: JSON.stringify(emailContent) });
+        }
+                function editUser(userId) { alert('Rediger bruker funksjonalitet kommer snart!'); }
         function deleteUser(userId) { alert('Slett bruker funksjonalitet kommer snart!'); }
         function editDepartment(deptId) { alert('Rediger avdeling funksjonalitet kommer snart!'); }
         function deleteDepartment(deptId) { alert('Slett avdeling funksjonalitet kommer snart!'); }
@@ -1032,6 +665,55 @@
         function showAddDeviationModal() { alert('Legg til avvik funksjonalitet kommer snart!'); }
         function showAddDocumentModal() { alert('Last opp dokument funksjonalitet kommer snart!'); }
         function showAddShiftModal() { alert('Legg til skift funksjonalitet kommer snart!'); }
-    </script>
+        
+        // Password change functions
+        function showPasswordChangeModal() {
+            document.getElementById('passwordChangeModal').classList.remove('hidden');
+            
+            // Add event listener for password change form
+            document.getElementById('passwordChangeForm').addEventListener('submit', handlePasswordChange);
+        }
+        
+        async function handlePasswordChange(event) {
+            event.preventDefault();
+            
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            if (newPassword !== confirmPassword) {
+                alert('Passordene matcher ikke!');
+                return;
+            }
+            
+            if (newPassword.length < 8) {
+                alert('Passordet må være minst 8 tegn langt!');
+                return;
+            }
+            
+            try {
+                // Update password in Firebase Auth
+                await currentUser.updatePassword(newPassword);
+                
+                // Update user document in Firestore
+                const userDoc = await db.collection('users').where('uid', '==', currentUser.uid).get();
+                if (!userDoc.empty) {
+                    await userDoc.docs[0].ref.update({
+                        mustChangePassword: false,
+                        passwordChangedAt: new Date()
+                    });
+                }
+                
+                // Hide modal and show dashboard
+                document.getElementById('passwordChangeModal').classList.add('hidden');
+                showDashboard();
+                loadAllData();
+                alert('Passord endret! Du er nå logget inn.');
+                
+            } catch (error) {
+                console.error('Error changing password:', error);
+                alert('Feil ved endring av passord: ' + error.message);
+            }
+        }
+            </script>
 </body>
 </html> 

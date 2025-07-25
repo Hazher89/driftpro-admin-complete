@@ -503,6 +503,12 @@
         async function addDepartment(event) {
             event.preventDefault();
             
+            // Prevent multiple submissions
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Lagrer...';
+            
             const newDepartment = {
                 name: document.getElementById('departmentName').value,
                 code: document.getElementById('departmentCode').value,
@@ -533,11 +539,20 @@
             } catch (error) {
                 console.error('Error adding department:', error);
                 alert('Feil ved lagring av avdeling');
+            } finally {
+                // Re-enable button
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
             }
         }
-
         async function saveDepartmentEdit(event) {
             event.preventDefault();
+            
+            // Prevent multiple submissions
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Lagrer...';
             
             const deptId = document.getElementById('editDepartmentId').value;
             const department = departments.find(d => d.id === deptId);
@@ -569,10 +584,13 @@
                 } catch (error) {
                     console.error('Error updating department:', error);
                     alert('Feil ved oppdatering av avdeling');
+                } finally {
+                    // Re-enable button
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
                 }
             }
         }
-
         async function deleteDepartment(deptId) {
             if (confirm('Er du sikker på at du vil slette denne avdelingen?')) {
                 try {
