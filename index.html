@@ -157,11 +157,14 @@
                 const userData = userDoc.data();
                 const userRole = userData?.role;
                 const companyId = userData?.companyId;
-                
-                // Show DriftPro Admin card only for users in DriftPro company (companyId: "driftpro")
+                console.log("User companyId:", companyId);
+                console.log("User role:", userRole);
+                console.log("Full userData:", userData);                console.log("User companyId:", companyId);
+                console.log("User role:", userRole);                
+                // Show DriftPro Admin card only for users in DriftPro AS company (companyId: "dXM97h0lQ2ru5N6k1wFw")
                 const driftproAdminCard = document.getElementById("driftproAdminCard");
                 if (driftproAdminCard) {
-                    if (companyId === "driftpro") {
+                    if (companyId === "dXM97h0lQ2ru5N6k1wFw") {
                         driftproAdminCard.style.display = "block";
                     } else {
                         driftproAdminCard.style.display = "none";
@@ -173,7 +176,7 @@
                     return;
                 }
                 
-                const companiesSnapshot = companyId === "driftpro" ? await db.collection("companies").get() : await db.collection("companies").where("id", "==", companyId).get();                const companies = [];
+                const companiesSnapshot = companyId === "dXM97h0lQ2ru5N6k1wFw" ? await db.collection("companies").get() : await db.collection("companies").where("id", "==", companyId).get();                const companies = [];
                 companiesSnapshot.forEach(doc => {
                     companies.push({ id: doc.id, ...doc.data() });
                 });
