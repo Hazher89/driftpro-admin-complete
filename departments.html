@@ -25,7 +25,7 @@
                     <a href="index.html" class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded-lg font-semibold transition-colors">
                         ← Tilbake til hjemmeside
                     </a>
-                    <button onclick="showAddDepartmentModal()" class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-semibold transition-colors">
+                    <button onclick="console.log("Button clicked"); showAddDepartmentModal()" class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-semibold transition-colors">
                         + Ny avdeling
                     </button>
                 </div>
@@ -472,7 +472,7 @@
         }
 
         // Modal functions
-        function showAddDepartmentModal() {
+        function showAddDepartmentModal() { console.log("Opening modal");
             document.getElementById('addDepartmentModal').classList.remove('hidden');
             populateLeaderFilters();
         }
