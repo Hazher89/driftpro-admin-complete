@@ -10,6 +10,9 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script>
+        window.addEventListener("load", function() {
+            console.log("Page loaded successfully");
+        });
         console.log("Script loaded successfully");
         // Firebase configuration
         const firebaseConfig = {
@@ -33,6 +36,7 @@
 
         // Check authentication
         auth.onAuthStateChanged(user => {
+            console.log("Current user:", currentUser);
             console.log("Auth state changed:", user ? "Logged in" : "Not logged in");
             if (user) {
                 currentUser = user;
@@ -109,7 +113,7 @@
                         </div>
                         <h3 class="text-2xl font-bold text-gray-800 mb-2">Ingen avdelinger ennå</h3>
                         <p class="text-gray-600 mb-6">Opprett din første avdeling for å komme i gang</p>
-                        <button onclick="showCreateDepartmentModal()" class="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200">
+                        <button onclick="alert("Button clicked!"); showCreateDepartmentModal()" class="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200">
                             + Opprett Første Avdeling
                         </button>
                     </button>
@@ -366,6 +370,7 @@
         
         function showCreateDepartmentModal() {
             document.getElementById("createDepartmentModal").style.display = "flex";
+            console.log("Modal element found:", document.getElementById("createDepartmentModal"));
             console.log("showCreateDepartmentModal called");
             updateEmployeeSelects();
             document.getElementById("departmentForm").reset();
@@ -473,7 +478,7 @@
         <div class="mb-8">
             <h2 class="text-3xl font-bold text-gray-800 mb-2">🏢 Avdelinger</h2>
             <p class="text-gray-600 mb-6">Administrer avdelinger, tildel ledere og organisér ansatte</p>
-            <button onclick="showCreateDepartmentModal()" class="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-lg hover:from-blue-600 hover:to-blue-700 transform hover:scale-105 transition-all duration-200 shadow-lg">
+            <button onclick="alert("Button clicked!"); showCreateDepartmentModal()" class="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-lg hover:from-blue-600 hover:to-blue-700 transform hover:scale-105 transition-all duration-200 shadow-lg">
                 + Opprett Ny Avdeling
             </button>
                     </button>
@@ -771,7 +776,6 @@
                         Opprett Avdeling
                     </button>
                     </button>
-                </div>
             </form>
         </div>
     </div>
