@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DriftPro - Bedriftsadministrasjon</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
+            authDomain: "driftpro-40ccd.firebaseapp.com",
+            projectId: "driftpro-40ccd",
+            storageBucket: "driftpro-40ccd.appspot.com",
+            messagingSenderId: "123456789012",
+            appId: "1:123456789012:web:abcdef1234567890"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        // Check authentication state
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                showDashboard(user);
+            } else {
+                showCompanySearch();
+            }
+        });
+
+        async function showCompanySearch() {
+            document.getElementById('companySearchScreen').style.display = 'flex';
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('dashboardScreen').style.display = 'none';
+            await loadAllCompanies();
+        }
+
+        async function loadAllCompanies() {
+            try {
+                const snapshot = await db.collection('companies').get();
+                const companies = [];
+                snapshot.forEach(doc => {
+                    companies.push({ id: doc.id, ...doc.data() });
+                });
+                
+                // Store companies globally for search
+                window.allCompanies = companies;
+                
+                // Don't display anything initially - wait for search
+                const companiesContainer = document.getElementById('companiesContainer');
+                companiesContainer.innerHTML = `
+                    <div class="text-center py-16">
+                        <div class="w-24 h-24 bg-gradient-to-br from-blue-400/20 to-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <svg class="w-12 h-12 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-800 mb-2">Søk etter din bedrift</h3>
+                        <p class="text-gray-600">Skriv navnet på din bedrift i søkeboksen ovenfor</p>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error loading companies:', error);
+                showNotification('Feil ved lasting av bedrifter', 'error');
+            }
+        }
+
+        function searchCompanies() {
+            const searchTerm = document.getElementById('companySearchInput').value.toLowerCase();
+            const companies = window.allCompanies || [];
+            
+            const filteredCompanies = companies.filter(company => 
+                company.name && company.name.toLowerCase().includes(searchTerm)
+            );
+            
+            displayCompanies(filteredCompanies);
+        }
+
+        function displayCompanies(companies) {
+            const companiesContainer = document.getElementById('companiesContainer');
+            
+            if (companies.length === 0) {
+                companiesContainer.innerHTML = `
+                    <div class="text-center py-16">
+                        <div class="w-24 h-24 bg-gradient-to-br from-red-400/20 to-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <svg class="w-12 h-12 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-800 mb-2">Ingen bedrifter funnet</h3>
+                        <p class="text-gray-600">Prøv å søke med et annet navn</p>
+                    </div>
+                `;
+            } else {
+                companiesContainer.innerHTML = companies.map(company => `
+                    <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-all duration-300 cursor-pointer" onclick="selectCompany('${company.id}')">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-800">${company.name || 'Ukjent bedrift'}</h3>
+                                <p class="text-gray-600">${company.description || 'Ingen beskrivelse'}</p>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function selectCompany(companyId) {
+            // Store selected company ID
+            localStorage.setItem('selectedCompanyId', companyId);
+            showLoginScreen();
+        }
+
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            if (!email || !password) {
+                showNotification('Vennligst fyll ut alle feltene', 'error');
+                return;
+            }
+            
+            try {
+                await auth.signInWithEmailAndPassword(email, password);
+                showNotification('Innlogging vellykket!', 'success');
+            } catch (error) {
+                showNotification('Innlogging feilet: ' + error.message, 'error');
+            }
+        }
+
+        async function showDashboard(user) {
+            document.getElementById('companySearchScreen').style.display = 'none';
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('dashboardScreen').style.display = 'block';
+            
+            document.getElementById('userName').textContent = user.email;
+            await loadUserData(user);
+        }
+
+        function showLoginScreen() {
+            document.getElementById('companySearchScreen').style.display = 'none';
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('dashboardScreen').style.display = 'none';
+        }
+
+        async function loadUserData(user) {
+            try {
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                const userData = userDoc.data();
+                const companyId = userData?.companyId;
+                
+                // Show DriftPro Admin card only for users in DriftPro AS company
+                const driftproAdminCard = document.getElementById("driftproAdminCard");
+                if (driftproAdminCard) {
+                    if (companyId === "dXM97h0lQ2ru5N6k1wFw") {
+                        driftproAdminCard.style.display = "block";
+                    } else {
+                        driftproAdminCard.style.display = "none";
+                    }
+                }
+                
+                if (!companyId) {
+                    console.error('No company ID found for user - GDPR compliance issue');
+                    return;
+                }
+                
+                const companiesSnapshot = companyId === "dXM97h0lQ2ru5N6k1wFw" ? 
+                    await db.collection("companies").get() : 
+                    await db.collection("companies").where("id", "==", companyId).get();
+                const companies = [];
+                companiesSnapshot.forEach(doc => {
+                    companies.push({ id: doc.id, ...doc.data() });
+                });
+                
+                updateDashboardStats(companies);
+            } catch (error) {
+                console.error('Error loading user data:', error);
+                showNotification('Feil ved lasting av data', 'error');
+            }
+        }
+
+        function updateDashboardStats(companies) {
+            const statsContainer = document.getElementById('dashboardStats');
+            if (!statsContainer) return;
+            
+            statsContainer.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-all duration-300">
+                        <div class="flex items-center justify-between">
+                            <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                                </svg>
+                            </div>
+                            <span class="text-2xl font-bold text-gray-800">${companies.length}</span>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-800 mt-4">Bedrifter</h3>
+                        <p class="text-gray-600 text-sm">Totalt antall registrerte bedrifter</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 transition-all duration-300 transform translate-x-full ${
+                type === 'error' ? 'bg-red-500 text-white' : 
+                type === 'success' ? 'bg-green-500 text-white' : 
+                'bg-blue-500 text-white'
+            }`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.classList.remove('translate-x-full');
+            }, 100);
+            
+            setTimeout(() => {
+                notification.classList.add('translate-x-full');
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }
+
+        function logout() {
+            auth.signOut().then(() => {
+                showCompanySearch();
+            });
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+    <!-- Company Search Screen -->
+    <div id="companySearchScreen" class="min-h-screen flex items-center justify-center p-4" style="display: none;">
+        <div class="max-w-4xl w-full">
+            <div class="text-center mb-12">
+                <div class="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                    <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                </div>
+                <h1 class="text-4xl font-bold gradient-text mb-4">DriftPro</h1>
+                <p class="text-xl text-gray-600 mb-8">Søk etter din bedrift for å komme i gang</p>
+            </div>
+            
+            <div class="bg-white rounded-2xl shadow-2xl p-8">
+                <div class="mb-8">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Søk etter Bedrift</h2>
+                    <p class="text-gray-600 mb-6">Skriv navnet på din bedrift for å finne den</p>
+                    
+                    <!-- Search Input -->
+                    <div class="relative max-w-md mx-auto">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                        <input 
+                            type="text" 
+                            id="companySearchInput"
+                            onkeyup="searchCompanies()"
+                            class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                            placeholder="Skriv bedriftsnavn..."
+                        >
+                    </div>
+                </div>
+                
+                <div id="companiesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Companies will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Screen -->
+    <div id="loginScreen" class="min-h-screen flex items-center justify-center p-4" style="display: none;">
+        <div class="max-w-md w-full">
+            <div class="bg-white rounded-2xl shadow-2xl p-8">
+                <div class="text-center mb-8">
+                    <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                    </div>
+                    <h1 class="text-3xl font-bold gradient-text">DriftPro</h1>
+                    <p class="text-gray-600 mt-2">Bedriftsadministrasjon</p>
+                </div>
+                
+                <form class="space-y-6" onsubmit="event.preventDefault(); login();">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">E-post</label>
+                        <input type="email" id="email" required
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                               placeholder="din@email.no">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Passord</label>
+                        <input type="password" id="password" required
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                               placeholder="••••••••">
+                    </div>
+                    
+                    <button type="submit" 
+                            class="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold py-3 px-6 rounded-lg hover:from-blue-600 hover:to-blue-700 transform hover:scale-105 transition-all duration-200 shadow-lg">
+                        Logg Inn
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard Screen -->
+    <div id="dashboardScreen" class="min-h-screen" style="display: none;">
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b border-gray-200">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center h-16">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                        </div>
+                        <h1 class="text-xl font-bold gradient-text">DriftPro</h1>
+                    </div>
+                    
+                    <div class="flex items-center space-x-4">
+                        <span class="text-sm text-gray-600">Logget inn som: <span id="userName" class="font-semibold text-gray-800"></span></span>
+                        <button onclick="logout()" class="px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-all duration-200">
+                            Logg Ut
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Welcome Section -->
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold text-gray-800 mb-2">Velkommen til DriftPro</h2>
+                <p class="text-gray-600">Velg en seksjon for å komme i gang</p>
+            </div>
+
+            <!-- Stats Section -->
+            <div id="dashboardStats" class="mb-12">
+                <!-- Stats will be loaded here -->
+            </div>
+
+            <!-- Navigation Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <a href="/employees.html" class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 card-hover group">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-800 group-hover:text-green-600 transition-colors duration-200">Ansatte</h3>
+                            <p class="text-gray-600 text-sm">Administrer ansatte</p>
+                        </div>
+                    </div>
+                </a>
+
+                <a href="/departments.html" class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 card-hover group">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-800 group-hover:text-purple-600 transition-colors duration-200">Avdelinger</h3>
+                            <p class="text-gray-600 text-sm">Organiser avdelinger</p>
+                        </div>
+                    </div>
+                </a>
+
+                <a href="/deviations.html" class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 card-hover group">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-800 group-hover:text-red-600 transition-colors duration-200">Avvik</h3>
+                            <p class="text-gray-600 text-sm">Håndter avvik</p>
+                        </div>
+                    </div>
+                </a>
+
+                <a href="/shifts.html" class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 card-hover group">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-800 group-hover:text-orange-600 transition-colors duration-200">Skiftplaner</h3>
+                            <p class="text-gray-600 text-sm">Planlegg skift</p>
+                        </div>
+                    </div>
+                </a>
+
+                <a href="/chat.html" class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 card-hover group">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-12 h-12 bg-gradient-to-br from-teal-500 to-teal-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-800 group-hover:text-teal-600 transition-colors duration-200">Chat</h3>
+                            <p class="text-gray-600 text-sm">Kommunikasjon</p>
+                        </div>
+                    </div>
+                </a>
+
+                <a href="/documents.html" class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 card-hover group">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-800 group-hover:text-indigo-600 transition-colors duration-200">Dokumenter</h3>
+                            <p class="text-gray-600 text-sm">Fildokumenter</p>
+                        </div>
+                    </div>
+                </a>
+
+                <div id="driftproAdminCard" style="display: none;">
+                    <a href="/driftpro-admin.html" class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 card-hover group block">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-12 h-12 bg-gradient-to-br from-pink-500 to-pink-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-800 group-hover:text-pink-600 transition-colors duration-200">DriftPro Admin</h3>
+                                <p class="text-gray-600 text-sm">Bedriftsadministrasjon</p>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DriftPro Admin - Bedriftsadministrasjon</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
+            authDomain: "driftpro-40ccd.firebaseapp.com",
+            projectId: "driftpro-40ccd",
+            storageBucket: "driftpro-40ccd.appspot.com",
+            messagingSenderId: "123456789012",
+            appId: "1:123456789012:web:abcdef1234567890"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        // Check if user is DriftPro admin
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                checkDriftProAdmin(user);
+            } else {
+                window.location.href = '/';
+            }
+        });
+
+        async function checkDriftProAdmin(user) {
+            try {
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                const userData = userDoc.data();
+                
+                if (userData?.companyId !== "dXM97h0lQ2ru5N6k1wFw") {
+                    showNotification('Du har ikke tilgang til DriftPro Admin panel - kun DriftPro bedriftens admin-brukere kan aksessere dette', 'error');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 3000);
+                    return;
+                }
+                
+                document.getElementById('userName').textContent = user.email;
+                loadAllCompanies();
+            } catch (error) {
+                console.error('Error checking admin status:', error);
+                window.location.href = '/';
+            }
+        }
+
+        async function loadAllCompanies() {
+            try {
+                const snapshot = await db.collection('companies').get();
+                const companies = [];
+                snapshot.forEach(doc => {
+                    companies.push({ id: doc.id, ...doc.data() });
+                });
+                
+                const companiesContainer = document.getElementById('companiesContainer');
+                companiesContainer.innerHTML = companies.map(company => `
+                    <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-all duration-300">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-lg flex items-center justify-center">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                                </svg>
+                            </div>
+                            <span class="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
+                                Aktiv
+                            </span>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">${company.name || 'Ukjent bedrift'}</h3>
+                        <p class="text-gray-600 text-sm mb-4">${company.description || 'Ingen beskrivelse'}</p>
+                        <div class="flex space-x-2">
+                            <button onclick="editCompany('${company.id}')" class="px-3 py-1 bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-600 transition-all duration-200 text-sm">
+                                Rediger
+                            </button>
+                            <button onclick="createAdminForCompany('${company.id}')" class="px-3 py-1 bg-green-500 text-white font-medium rounded-lg hover:bg-green-600 transition-all duration-200 text-sm">
+                                Opprett Admin
+                            </button>
+                            <button onclick="deleteCompany('${company.id}')" class="px-3 py-1 bg-red-500 text-white font-medium rounded-lg hover:bg-red-600 transition-all duration-200 text-sm">
+                                Slett
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading companies:', error);
+                showNotification('Feil ved lasting av bedrifter', 'error');
+            }
+        }
+
+        function showCreateCompanyModal() {
+            document.getElementById('createCompanyModal').style.display = 'flex';
+        }
+
+        function hideCreateCompanyModal() {
+            document.getElementById('createCompanyModal').style.display = 'none';
+            document.getElementById('companyForm').reset();
+        }
+
+        async function createCompany() {
+            const name = document.getElementById('companyName').value;
+            const description = document.getElementById('companyDescription').value;
+            const adminName = document.getElementById('adminName').value;
+            const adminEmail = document.getElementById('adminEmail').value;
+            
+            if (!name || !adminName || !adminEmail) {
+                showNotification('Bedriftsnavn, admin navn og e-post er påkrevd', 'error');
+                return;
+            }
+            
+            try {
+                // Create company first
+                const companyRef = await db.collection('companies').add({
+                    name: name,
+                    description: description,
+                    createdAt: new Date(),
+                    createdBy: auth.currentUser.uid
+                });
+                
+                // Create user in Firebase Auth with temporary password
+                const tempPassword = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+                
+                try {
+                    // Create user in Firebase Auth
+                    const userCredential = await firebase.auth().createUserWithEmailAndPassword(adminEmail, tempPassword);
+                    const newUser = userCredential.user;
+                    
+                    // Update user profile with name
+                    await newUser.updateProfile({
+                        displayName: adminName
+                    });
+                    
+                    // Send password reset email (this will allow them to set their own password)
+                    await firebase.auth().sendPasswordResetEmail(adminEmail);
+                    
+                    // Store user data in Firestore
+                    await db.collection('users').doc(newUser.uid).set({
+                        name: adminName,
+                        email: adminEmail,
+                        companyId: companyRef.id,
+                        role: 'admin',
+                        createdAt: new Date(),
+                        createdBy: auth.currentUser.uid
+                    });
+                    
+                    showNotification(`Bedrift opprettet! Passord reset e-post sendt til ${adminEmail}`, 'success');
+                    
+                } catch (authError) {
+                    console.error('Auth error:', authError);
+                    
+                    // If user already exists, just send password reset
+                    if (authError.code === 'auth/email-already-in-use') {
+                        try {
+                            await firebase.auth().sendPasswordResetEmail(adminEmail);
+                            showNotification(`Passord reset e-post sendt til ${adminEmail}`, 'success');
+                        } catch (resetError) {
+                            console.error('Password reset error:', resetError);
+                            showNotification('Kunne ikke sende passord reset e-post', 'error');
+                        }
+                    } else {
+                        showNotification('Feil ved opprettelse av bruker: ' + authError.message, 'error');
+                    }
+                }
+                
+                hideCreateCompanyModal();
+                loadAllCompanies();
+            } catch (error) {
+                showNotification('Feil ved opprettelse av bedrift: ' + error.message, 'error');
+            }
+        }
+
+        function editCompany(companyId) {
+            showNotification('Redigeringsfunksjonalitet kommer snart', 'info');
+        }
+
+        function createAdminForCompany(companyId) {
+            showCreateAdminModal(companyId);
+        }
+
+        function showCreateAdminModal(companyId) {
+            document.getElementById('adminCompanyId').value = companyId;
+            document.getElementById('createAdminModal').style.display = 'flex';
+        }
+
+        function hideCreateAdminModal() {
+            document.getElementById('createAdminModal').style.display = 'none';
+            document.getElementById('adminForm').reset();
+        }
+
+        async function createAdminUser() {
+            const email = document.getElementById('adminEmail').value;
+            const name = document.getElementById('adminName').value;
+            const companyId = document.getElementById('adminCompanyId').value;
+            
+            if (!email || !name) {
+                showNotification('E-post og navn er påkrevd', 'error');
+                return;
+            }
+            
+            try {
+                // Create user in Firebase Auth with temporary password
+                const tempPassword = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+                
+                try {
+                    // Create user in Firebase Auth
+                    const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, tempPassword);
+                    const newUser = userCredential.user;
+                    
+                    // Update user profile with name
+                    await newUser.updateProfile({
+                        displayName: name
+                    });
+                    
+                    // Send password reset email
+                    await firebase.auth().sendPasswordResetEmail(email);
+                    
+                    // Store user data in Firestore
+                    await db.collection('users').doc(newUser.uid).set({
+                        name: name,
+                        email: email,
+                        companyId: companyId,
+                        role: 'admin',
+                        createdAt: new Date(),
+                        createdBy: auth.currentUser.uid
+                    });
+                    
+                    showNotification(`Admin bruker opprettet! Passord reset e-post sendt til ${email}`, 'success');
+                    
+                } catch (authError) {
+                    console.error('Auth error:', authError);
+                    
+                    // If user already exists, just send password reset
+                    if (authError.code === 'auth/email-already-in-use') {
+                        try {
+                            await firebase.auth().sendPasswordResetEmail(email);
+                            showNotification(`Passord reset e-post sendt til ${email}`, 'success');
+                        } catch (resetError) {
+                            console.error('Password reset error:', resetError);
+                            showNotification('Kunne ikke sende passord reset e-post', 'error');
+                        }
+                    } else {
+                        showNotification('Feil ved opprettelse av bruker: ' + authError.message, 'error');
+                    }
+                }
+                
+                hideCreateAdminModal();
+                loadAllCompanies();
+            } catch (error) {
+                showNotification('Feil ved opprettelse av admin bruker: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteCompany(companyId) {
+            if (confirm('Er du sikker på at du vil slette denne bedriften? Dette kan ikke angres.')) {
+                try {
+                    await db.collection('companies').doc(companyId).delete();
+                    showNotification('Bedrift slettet', 'success');
+                    loadAllCompanies();
+                } catch (error) {
+                    showNotification('Feil ved sletting av bedrift: ' + error.message, 'error');
+                }
+            }
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 transition-all duration-300 transform translate-x-full ${
+                type === 'error' ? 'bg-red-500 text-white' : 
+                type === 'success' ? 'bg-green-500 text-white' : 
+                'bg-blue-500 text-white'
+            }`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.classList.remove('translate-x-full');
+            }, 100);
+            
+            setTimeout(() => {
+                notification.classList.add('translate-x-full');
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 5000);
+        }
+
+        function logout() {
+            auth.signOut().then(() => {
+                window.location.href = '/';
+            });
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-3">
+                    <a href="/" class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                        </div>
+                        <h1 class="text-xl font-bold gradient-text">DriftPro Admin</h1>
+                    </a>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm text-gray-600">Logget inn som: <span id="userName" class="font-semibold text-gray-800"></span></span>
+                    <button onclick="logout()" class="px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-all duration-200">
+                        Logg Ut
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Page Header -->
+        <div class="mb-8">
+            <h2 class="text-3xl font-bold text-gray-800 mb-2">Bedriftsadministrasjon</h2>
+            <p class="text-gray-600">Administrer bedrifter og opprett admin-brukere for hver bedrift</p>
+            <button onclick="showCreateCompanyModal()" class="mt-4 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold rounded-lg hover:from-green-600 hover:to-green-700 transform hover:scale-105 transition-all duration-200 shadow-lg">
+                + Opprett Ny Bedrift
+            </button>
+        </div>
+
+        <!-- Companies Grid -->
+        <div id="companiesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Companies will be loaded here -->
+        </div>
+    </main>
+
+    <!-- Create Company Modal -->
+    <div id="createCompanyModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" style="display: none;">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+            <h3 class="text-2xl font-bold text-gray-800 mb-6">Opprett Ny Bedrift</h3>
+            <form id="companyForm" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Bedriftsnavn *</label>
+                    <input type="text" id="companyName" required
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                           placeholder="Skriv bedriftsnavn">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Beskrivelse</label>
+                    <textarea id="companyDescription" rows="3"
+                              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                              placeholder="Beskriv bedriften"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Admin Navn *</label>
+                    <input type="text" id="adminName" required
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                           placeholder="Skriv admin navn">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Admin E-post *</label>
+                    <input type="email" id="adminEmail" required
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                           placeholder="admin@bedrift.no">
+                </div>
+                <div class="flex space-x-4">
+                    <button type="button" onclick="createCompany()" class="flex-1 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200">
+                        Opprett Bedrift
+                    </button>
+                    <button type="button" onclick="hideCreateCompanyModal()" class="flex-1 py-3 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition-all duration-200">
+                        Avbryt
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Create Admin Modal -->
+    <div id="createAdminModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" style="display: none;">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+            <h3 class="text-2xl font-bold text-gray-800 mb-6">Opprett Admin Bruker</h3>
+            <form id="adminForm" class="space-y-6">
+                <input type="hidden" id="adminCompanyId">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Navn *</label>
+                    <input type="text" id="adminName" required
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                           placeholder="Skriv navn">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">E-post *</label>
+                    <input type="email" id="adminEmail" required
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                           placeholder="admin@bedrift.no">
+                </div>
+                <div class="flex space-x-4">
+                    <button type="button" onclick="createAdminUser()" class="flex-1 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200">
+                        Opprett Admin
+                    </button>
+                    <button type="button" onclick="hideCreateAdminModal()" class="flex-1 py-3 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition-all duration-200">
+                        Avbryt
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
