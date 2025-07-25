@@ -1,8 +1,11 @@
 [build]
-  publish = "."
-  command = ""
+  publish = "build/web"
+  command = "flutter build web --release && cp departments.html build/web/ && cp index.html build/web/"
 
 [[redirects]]
   from = "/*"
   to = "/index.html"
-  status = 200 
+  status = 200
+
+[build.environment]
+  FLUTTER_VERSION = "3.19.0"
