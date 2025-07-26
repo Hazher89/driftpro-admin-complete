@@ -25,62 +25,7 @@ export default function CompanySelector() {
       setCompanies(results);
     } catch (err) {
       console.error('Error searching companies:', err);
-      
-      // Fallback til mock-data hvis Firebase ikke fungerer
-      const mockCompanies = [
-        {
-          id: '1',
-          name: 'DriftPro AS',
-          industry: 'Teknologi',
-          employees: 50,
-          address: 'Storgata 1, 0001 Oslo',
-          phone: '+47 123 45 678',
-          email: 'kontakt@driftpro.no',
-          website: 'https://driftpro.no',
-          isActive: true,
-          createdAt: new Date(),
-          settings: {
-            enableDeviationReporting: true,
-            enableRiskAnalysis: true,
-            enableDocumentArchive: true,
-            enableInternalControl: true,
-            enableChat: true,
-            enableBirthdayCalendar: true,
-            maxFileSizeMB: 10,
-            allowedFileTypes: ['pdf', 'doc', 'docx', 'jpg', 'png']
-          }
-        },
-        {
-          id: '2',
-          name: 'Teknisk Service Norge',
-          industry: 'Service',
-          employees: 25,
-          address: 'Industriveien 15, 5000 Bergen',
-          phone: '+47 987 65 432',
-          email: 'info@tsn.no',
-          website: 'https://tsn.no',
-          isActive: true,
-          createdAt: new Date(),
-          settings: {
-            enableDeviationReporting: true,
-            enableRiskAnalysis: false,
-            enableDocumentArchive: true,
-            enableInternalControl: false,
-            enableChat: true,
-            enableBirthdayCalendar: false,
-            maxFileSizeMB: 5,
-            allowedFileTypes: ['pdf', 'doc', 'docx']
-          }
-        }
-      ];
-      
-      const filteredMock = mockCompanies.filter(company =>
-        company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        company.industry.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      
-      setCompanies(filteredMock);
-      setError('Bruker test-data. Firebase-kobling ikke tilgjengelig.');
+      setError('Kunne ikke søke etter bedrifter. Prøv igjen.');
     } finally {
       setLoading(false);
     }
@@ -94,13 +39,11 @@ export default function CompanySelector() {
       if (fullCompany) {
         setSelectedCompany(fullCompany);
       } else {
-        // Fallback til mock-data hvis Firebase ikke fungerer
-        setSelectedCompany(company);
+        setError('Kunne ikke hente bedriftsdata. Prøv igjen.');
       }
     } catch (err) {
       console.error('Error selecting company:', err);
-      // Fallback til mock-data hvis Firebase ikke fungerer
-      setSelectedCompany(company);
+      setError('Kunne ikke velge bedrift. Prøv igjen.');
     } finally {
       setLoading(false);
     }
