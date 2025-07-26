@@ -81,8 +81,25 @@ export class FirebaseService {
             data.industry?.toLowerCase().includes(searchTerm.toLowerCase())) {
           companies.push({
             id: doc.id,
-            ...data,
-            createdAt: data.createdAt?.toDate() || new Date()
+            name: data.name || 'Ukjent bedrift',
+            industry: data.industry || 'Generell',
+            employees: data.employees || 0,
+            address: data.address || '',
+            phone: data.phone || '',
+            email: data.email || '',
+            website: data.website || '',
+            isActive: data.isActive !== false, // Default to true if not specified
+            createdAt: data.createdAt?.toDate() || new Date(),
+            settings: data.settings || {
+              enableDeviationReporting: true,
+              enableRiskAnalysis: true,
+              enableDocumentArchive: true,
+              enableInternalControl: true,
+              enableChat: true,
+              enableBirthdayCalendar: true,
+              maxFileSizeMB: 10,
+              allowedFileTypes: ['pdf', 'doc', 'docx', 'jpg', 'png']
+            }
           } as Company);
         }
       });
@@ -126,8 +143,25 @@ export class FirebaseService {
         const data = companyDoc.data();
         return {
           id: companyDoc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate() || new Date()
+          name: data.name || 'Ukjent bedrift',
+          industry: data.industry || 'Generell',
+          employees: data.employees || 0,
+          address: data.address || '',
+          phone: data.phone || '',
+          email: data.email || '',
+          website: data.website || '',
+          isActive: data.isActive !== false, // Default to true if not specified
+          createdAt: data.createdAt?.toDate() || new Date(),
+          settings: data.settings || {
+            enableDeviationReporting: true,
+            enableRiskAnalysis: true,
+            enableDocumentArchive: true,
+            enableInternalControl: true,
+            enableChat: true,
+            enableBirthdayCalendar: true,
+            maxFileSizeMB: 10,
+            allowedFileTypes: ['pdf', 'doc', 'docx', 'jpg', 'png']
+          }
         } as Company;
       }
       return null;
@@ -159,8 +193,25 @@ export class FirebaseService {
         const data = doc.data();
         companies.push({
           id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate() || new Date()
+          name: data.name || 'Ukjent bedrift',
+          industry: data.industry || 'Generell',
+          employees: data.employees || 0,
+          address: data.address || '',
+          phone: data.phone || '',
+          email: data.email || '',
+          website: data.website || '',
+          isActive: data.isActive !== false, // Default to true if not specified
+          createdAt: data.createdAt?.toDate() || new Date(),
+          settings: data.settings || {
+            enableDeviationReporting: true,
+            enableRiskAnalysis: true,
+            enableDocumentArchive: true,
+            enableInternalControl: true,
+            enableChat: true,
+            enableBirthdayCalendar: true,
+            maxFileSizeMB: 10,
+            allowedFileTypes: ['pdf', 'doc', 'docx', 'jpg', 'png']
+          }
         } as Company);
       });
       
