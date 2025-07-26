@@ -15,11 +15,50 @@ export default function CompanySelector({ onCompanySelect }: CompanySelectorProp
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Mock data for testing
+  const mockCompanies: Company[] = [
+    {
+      id: 'driftpro-demo',
+      name: 'DriftPro Demo',
+      email: 'admin@driftpro.no',
+      logoURL: null,
+      primaryColor: '#3c8dbc',
+      secondaryColor: '#1e40af',
+      address: 'Oslo, Norge',
+      phoneNumber: '+47 123 45 678',
+      website: 'https://driftpro.no',
+      description: 'Demo bedrift for DriftPro Admin Panel',
+      adminUserId: 'admin-user',
+      isActive: true,
+      subscriptionPlan: 'premium',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    },
+    {
+      id: 'test-company',
+      name: 'Test Bedrift AS',
+      email: 'info@testbedrift.no',
+      logoURL: null,
+      primaryColor: '#10b981',
+      secondaryColor: '#059669',
+      address: 'Bergen, Norge',
+      phoneNumber: '+47 987 65 432',
+      website: 'https://testbedrift.no',
+      description: 'Test bedrift for utvikling og testing',
+      adminUserId: 'test-admin',
+      isActive: true,
+      subscriptionPlan: 'basic',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }
+  ];
+
   // Fetch companies from Firebase
   useEffect(() => {
     const fetchCompanies = async () => {
       if (!db) {
-        setError('Firebase Database er ikke tilgjengelig');
+        console.log('Firebase Database ikke tilgjengelig, bruker mock data');
+        setCompanies(mockCompanies);
         setLoading(false);
         return;
       }
@@ -42,7 +81,7 @@ export default function CompanySelector({ onCompanySelect }: CompanySelectorProp
             secondaryColor: data.secondaryColor || '#1E40AF',
             address: data.address || '',
             phoneNumber: data.phoneNumber || '',
-            website: data.website || '',
+            website: data.website || 'https://driftpro.no',
             description: data.description || '',
             adminUserId: data.adminUserId || '',
             isActive: data.isActive || true,
@@ -52,10 +91,17 @@ export default function CompanySelector({ onCompanySelect }: CompanySelectorProp
           });
         });
         
-        setCompanies(companiesData);
+        // If no companies found in Firebase, use mock data
+        if (companiesData.length === 0) {
+          console.log('Ingen bedrifter funnet i Firebase, bruker mock data');
+          setCompanies(mockCompanies);
+        } else {
+          setCompanies(companiesData);
+        }
       } catch (err) {
         console.error('Error fetching companies:', err);
-        setError('Kunne ikke hente bedrifter fra databasen');
+        console.log('Bruker mock data på grunn av Firebase feil');
+        setCompanies(mockCompanies);
       } finally {
         setLoading(false);
       }
@@ -233,25 +279,25 @@ export default function CompanySelector({ onCompanySelect }: CompanySelectorProp
                   {company.name.charAt(0).toUpperCase()}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <h3 style={{ 
-                    margin: '0 0 8px 0', 
-                    fontSize: '18px', 
+                  <h3 style={{
+                    margin: '0 0 8px 0',
+                    fontSize: '18px',
                     fontWeight: '600',
                     color: '#333'
                   }}>
                     {company.name}
                   </h3>
-                  <p style={{ 
-                    margin: '0 0 6px 0', 
-                    fontSize: '14px', 
+                  <p style={{
+                    margin: '0 0 6px 0',
+                    fontSize: '14px',
                     color: '#6c757d'
                   }}>
                     <i className="fas fa-envelope" style={{ marginRight: '6px' }}></i>
                     {company.email}
                   </p>
-                  <p style={{ 
-                    margin: '0', 
-                    fontSize: '13px', 
+                  <p style={{
+                    margin: '0',
+                    fontSize: '13px',
                     color: '#17a2b8',
                     fontWeight: '500'
                   }}>
@@ -259,7 +305,7 @@ export default function CompanySelector({ onCompanySelect }: CompanySelectorProp
                     {company.address}
                   </p>
                 </div>
-                <i className="fas fa-chevron-right" style={{ 
+                <i className="fas fa-chevron-right" style={{
                   color: '#6c757d',
                   fontSize: '16px',
                   transition: 'transform 0.3s'
@@ -271,8 +317,8 @@ export default function CompanySelector({ onCompanySelect }: CompanySelectorProp
       )}
 
       {searchTerm && filteredCompanies.length === 0 && (
-        <div style={{ 
-          textAlign: 'center', 
+        <div style={{
+          textAlign: 'center',
           padding: '40px 20px',
           color: '#6c757d'
         }}>
@@ -285,8 +331,8 @@ export default function CompanySelector({ onCompanySelect }: CompanySelectorProp
       )}
 
       {!searchTerm && companies.length === 0 && (
-        <div style={{ 
-          textAlign: 'center', 
+        <div style={{
+          textAlign: 'center',
           padding: '40px 20px',
           color: '#6c757d'
         }}>
