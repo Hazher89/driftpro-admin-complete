@@ -70,17 +70,15 @@ export class FirebaseService {
 
     try {
       const companiesRef = collection(db, 'companies');
-      const q = query(
-        companiesRef,
-        where('isActive', '==', true),
-        orderBy('name')
-      );
+      // Forenklet spørring uten sammensatte filtre for å unngå index-problemer
+      const q = query(companiesRef);
       
       const querySnapshot = await getDocs(q);
       const companies: Company[] = [];
       
       querySnapshot.forEach((doc) => {
         const data = doc.data();
+        // Filtrer på klient-siden for å unngå index-problemer
         if (data.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             data.industry?.toLowerCase().includes(searchTerm.toLowerCase())) {
           companies.push({
@@ -121,8 +119,25 @@ export class FirebaseService {
               data.industry?.toLowerCase().includes(searchTerm.toLowerCase())) {
             companies.push({
               id: doc.id,
-              ...data,
-              createdAt: data.createdAt?.toDate() || new Date()
+              name: data.name || 'Ukjent bedrift',
+              industry: data.industry || 'Generell',
+              employees: data.employees || 0,
+              address: data.address || '',
+              phone: data.phone || '',
+              email: data.email || '',
+              website: data.website || '',
+              isActive: data.isActive !== false, // Default to true if not specified
+              createdAt: data.createdAt?.toDate() || new Date(),
+              settings: data.settings || {
+                enableDeviationReporting: true,
+                enableRiskAnalysis: true,
+                enableDocumentArchive: true,
+                enableInternalControl: true,
+                enableChat: true,
+                enableBirthdayCalendar: true,
+                maxFileSizeMB: 10,
+                allowedFileTypes: ['pdf', 'doc', 'docx', 'jpg', 'png']
+              }
             } as Company);
           }
         });
