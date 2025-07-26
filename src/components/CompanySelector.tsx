@@ -1,66 +1,58 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { FirebaseService, Company } from '../lib/firebase-service';
+import { Company } from '../types';
 
-export default function CompanySelector() {
-  const { setSelectedCompany } = useAuth();
+interface CompanySelectorProps {
+  onCompanySelect: (company: Company) => void;
+}
+
+export default function CompanySelector({ onCompanySelect }: CompanySelectorProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const handleSearch = useCallback(async () => {
-    if (!searchTerm.trim()) {
-      setCompanies([]);
-      return;
+  // Mock companies data
+  const mockCompanies: Company[] = [
+    {
+      id: '1',
+      name: 'DriftPro AS',
+      email: 'kontakt@driftpro.no',
+      logoURL: null,
+      primaryColor: '#3B82F6',
+      secondaryColor: '#1E40AF',
+      address: 'Storgata 1, 0001 Oslo',
+      phoneNumber: '+47 123 45 678',
+      website: 'https://driftpro.no',
+      description: 'Ledende leverandør av drift og vedlikehold',
+      adminUserId: 'admin1',
+      isActive: true,
+      subscriptionPlan: 'enterprise',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    },
+    {
+      id: '2',
+      name: 'Vedlikehold Norge AS',
+      email: 'info@vedlikehold.no',
+      logoURL: null,
+      primaryColor: '#10B981',
+      secondaryColor: '#059669',
+      address: 'Karl Johans gate 10, 0154 Oslo',
+      phoneNumber: '+47 987 65 432',
+      website: 'https://vedlikehold.no',
+      description: 'Profesjonell vedlikeholdstjeneste',
+      adminUserId: 'admin2',
+      isActive: true,
+      subscriptionPlan: 'premium',
+      createdAt: new Date(),
+      updatedAt: new Date()
     }
+  ];
 
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const results = await FirebaseService.searchCompanies(searchTerm);
-      setCompanies(results);
-    } catch (err) {
-      console.error('Error searching companies:', err);
-      setError('Kunne ikke søke etter bedrifter. Prøv igjen.');
-    } finally {
-      setLoading(false);
-    }
-  }, [searchTerm]);
-
-  const handleCompanySelect = async (company: Company) => {
-    setLoading(true);
-    try {
-      // Get full company data from Firebase
-      const fullCompany = await FirebaseService.getCompanyById(company.id);
-      if (fullCompany) {
-        setSelectedCompany(fullCompany);
-      } else {
-        setError('Kunne ikke hente bedriftsdata. Prøv igjen.');
-      }
-    } catch (err) {
-      console.error('Error selecting company:', err);
-      setError('Kunne ikke velge bedrift. Prøv igjen.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Search when user types (with debounce)
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (searchTerm.trim()) {
-        handleSearch();
-      } else {
-        setCompanies([]);
-      }
-    }, 500);
-
-    return () => clearTimeout(timeoutId);
-  }, [searchTerm, handleSearch]);
+  const filteredCompanies = mockCompanies.filter(company =>
+    company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    company.description.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div style={{ maxWidth: '600px', margin: '0 auto', padding: '20px' }}>
@@ -78,7 +70,7 @@ export default function CompanySelector() {
           color: '#6c757d',
           marginBottom: '30px'
         }}>
-          Søk etter din bedrift for å komme i gang
+          Velg din bedrift for å komme i gang
         </p>
       </div>
 
@@ -94,7 +86,7 @@ export default function CompanySelector() {
           }}></i>
           <input
             type="text"
-            placeholder="Søk etter bedriftsnavn eller bransje..."
+            placeholder="Søk etter bedriftsnavn..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{
@@ -113,37 +105,12 @@ export default function CompanySelector() {
         </div>
       </div>
 
-      {error && (
-        <div style={{ 
-          padding: '12px', 
-          backgroundColor: '#f8d7da', 
-          color: '#721c24', 
-          borderRadius: '6px', 
-          marginBottom: '20px',
-          border: '1px solid #f5c6cb'
-        }}>
-          <i className="fas fa-exclamation-triangle" style={{ marginRight: '8px' }}></i>
-          {error}
-        </div>
-      )}
-
-      {loading && (
-        <div style={{ 
-          textAlign: 'center', 
-          padding: '20px',
-          color: '#3c8dbc'
-        }}>
-          <i className="fas fa-spinner fa-spin" style={{ fontSize: '24px', marginBottom: '10px' }}></i>
-          <p>Søker etter bedrifter...</p>
-        </div>
-      )}
-
-      {!loading && companies.length > 0 && (
+      {filteredCompanies.length > 0 && (
         <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-          {companies.map((company) => (
+          {filteredCompanies.map((company) => (
             <div
               key={company.id}
-              onClick={() => handleCompanySelect(company)}
+              onClick={() => onCompanySelect(company)}
               style={{
                 padding: '20px',
                 border: '1px solid #dee2e6',
@@ -195,8 +162,8 @@ export default function CompanySelector() {
                     fontSize: '14px', 
                     color: '#6c757d'
                   }}>
-                    <i className="fas fa-industry" style={{ marginRight: '6px' }}></i>
-                    {company.industry}
+                    <i className="fas fa-envelope" style={{ marginRight: '6px' }}></i>
+                    {company.email}
                   </p>
                   <p style={{ 
                     margin: '0', 
@@ -204,8 +171,8 @@ export default function CompanySelector() {
                     color: '#17a2b8',
                     fontWeight: '500'
                   }}>
-                    <i className="fas fa-users" style={{ marginRight: '6px' }}></i>
-                    {company.employees} ansatte
+                    <i className="fas fa-map-marker-alt" style={{ marginRight: '6px' }}></i>
+                    {company.address}
                   </p>
                 </div>
                 <i className="fas fa-chevron-right" style={{ 
@@ -219,7 +186,7 @@ export default function CompanySelector() {
         </div>
       )}
 
-      {!loading && searchTerm && companies.length === 0 && (
+      {searchTerm && filteredCompanies.length === 0 && (
         <div style={{ 
           textAlign: 'center', 
           padding: '40px 20px',
@@ -228,21 +195,21 @@ export default function CompanySelector() {
           <i className="fas fa-search" style={{ fontSize: '48px', marginBottom: '15px', opacity: '0.5' }}></i>
           <h3 style={{ margin: '0 0 10px 0', fontSize: '18px' }}>Ingen bedrifter funnet</h3>
           <p style={{ margin: '0', fontSize: '14px' }}>
-            Prøv å søke med et annet navn eller bransje
+            Prøv å søke med et annet navn
           </p>
         </div>
       )}
 
-      {!searchTerm && !loading && (
+      {!searchTerm && (
         <div style={{ 
           textAlign: 'center', 
           padding: '40px 20px',
           color: '#6c757d'
         }}>
           <i className="fas fa-building" style={{ fontSize: '48px', marginBottom: '15px', opacity: '0.5' }}></i>
-          <h3 style={{ margin: '0 0 10px 0', fontSize: '18px' }}>Søk etter din bedrift</h3>
+          <h3 style={{ margin: '0 0 10px 0', fontSize: '18px' }}>Velg din bedrift</h3>
           <p style={{ margin: '0', fontSize: '14px' }}>
-            Skriv bedriftsnavn eller bransje i søkefeltet ovenfor
+            Klikk på en bedrift for å logge inn
           </p>
         </div>
       )}

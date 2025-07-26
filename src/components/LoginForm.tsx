@@ -2,15 +2,15 @@
 
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { FirebaseService } from '../lib/firebase-service';
+import { Company } from '../types';
 
-interface FirebaseError {
-  code: string;
-  message: string;
+interface LoginFormProps {
+  selectedCompany: Company;
+  onBack: () => void;
 }
 
-export default function LoginForm() {
-  const { selectedCompany } = useAuth();
+export default function LoginForm({ selectedCompany, onBack }: LoginFormProps) {
+  const { login, selectCompany } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -29,37 +29,18 @@ export default function LoginForm() {
     setError(null);
 
     try {
-      // Use Firebase authentication
-      await FirebaseService.login(email, password);
+      const success = await login(email, password);
       
-      // Get user data from Firestore
-      // Note: In a real app, you'd get the user ID from the auth result
-      // For now, we'll use the email to find the user
-      const users = await FirebaseService.getUsersByCompany(selectedCompany?.id || '');
-      const user = users.find(u => u.email === email);
-      
-      if (user) {
-        // Update the auth context with the user data
-        // This would typically be handled in the AuthContext
-        console.log('User logged in:', user);
+      if (success) {
+        // Set the selected company
+        selectCompany(selectedCompany);
+      } else {
+        setError('Feil e-post eller passord. Prøv igjen.');
       }
       
     } catch (err: unknown) {
       console.error('Login error:', err);
-      
-      // Handle specific Firebase auth errors
-      const firebaseError = err as FirebaseError;
-      if (firebaseError.code === 'auth/user-not-found') {
-        setError('Bruker ikke funnet. Sjekk e-postadressen.');
-      } else if (firebaseError.code === 'auth/wrong-password') {
-        setError('Feil passord. Prøv igjen.');
-      } else if (firebaseError.code === 'auth/invalid-email') {
-        setError('Ugyldig e-postadresse.');
-      } else if (firebaseError.code === 'auth/too-many-requests') {
-        setError('For mange mislykkede forsøk. Prøv igjen senere.');
-      } else {
-        setError('Kunne ikke logge inn. Prøv igjen.');
-      }
+      setError('Kunne ikke logge inn. Prøv igjen.');
     } finally {
       setLoading(false);
     }
@@ -76,6 +57,38 @@ export default function LoginForm() {
         }}>
           Logg inn
         </h1>
+        <p style={{ 
+          fontSize: '16px', 
+          color: '#6c757d',
+          marginBottom: '5px'
+        }}>
+          på
+        </p>
+        <p style={{ 
+          fontSize: '18px', 
+          fontWeight: '600',
+          color: '#3c8dbc',
+          marginBottom: '20px'
+        }}>
+          {selectedCompany.name}
+        </p>
+        <button
+          type="button"
+          onClick={onBack}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#6c757d',
+            fontSize: '14px',
+            cursor: 'pointer',
+            textDecoration: 'underline',
+            transition: 'color 0.3s'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.color = '#3c8dbc'}
+          onMouseLeave={(e) => e.currentTarget.style.color = '#6c757d'}
+        >
+          ← Velg annen bedrift
+        </button>
       </div>
 
       <form onSubmit={handleSubmit} style={{ marginBottom: '20px' }}>
@@ -215,28 +228,22 @@ export default function LoginForm() {
 
       <div style={{ 
         textAlign: 'center', 
-        marginTop: '20px'
+        marginTop: '20px',
+        padding: '15px',
+        backgroundColor: '#f8f9fa',
+        borderRadius: '6px',
+        fontSize: '14px',
+        color: '#6c757d'
       }}>
-        <button
-          type="button"
-          onClick={() => {
-            // TODO: Implement forgot password functionality
-            alert('Glemt passord funksjonalitet kommer snart!');
-          }}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: '#3c8dbc',
-            fontSize: '14px',
-            cursor: 'pointer',
-            textDecoration: 'underline',
-            transition: 'color 0.3s'
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.color = '#367fa9'}
-          onMouseLeave={(e) => e.currentTarget.style.color = '#3c8dbc'}
-        >
-          Glemt passord?
-        </button>
+        <p style={{ margin: '0 0 10px 0' }}>
+          <strong>Demo innlogging:</strong>
+        </p>
+        <p style={{ margin: '0 0 5px 0' }}>
+          E-post: <code>admin@driftpro.no</code>
+        </p>
+        <p style={{ margin: '0' }}>
+          Passord: <code>admin123</code>
+        </p>
       </div>
     </div>
   );
