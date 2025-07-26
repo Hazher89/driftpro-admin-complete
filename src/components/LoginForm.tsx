@@ -76,13 +76,6 @@ export default function LoginForm() {
         }}>
           Logg inn
         </h1>
-        <p style={{ 
-          fontSize: '16px', 
-          color: '#6c757d',
-          marginBottom: '20px'
-        }}>
-          {selectedCompany?.name}
-        </p>
       </div>
 
       <form onSubmit={handleSubmit} style={{ marginBottom: '20px' }}>
@@ -222,21 +215,28 @@ export default function LoginForm() {
 
       <div style={{ 
         textAlign: 'center', 
-        padding: '20px',
-        backgroundColor: '#f8f9fa',
-        borderRadius: '6px',
-        fontSize: '14px',
-        color: '#6c757d'
+        marginTop: '20px'
       }}>
-        <p style={{ margin: '0 0 10px 0' }}>
-          <strong>Demo-kontoer:</strong>
-        </p>
-        <p style={{ margin: '0 0 5px 0', fontSize: '12px' }}>
-          Admin: admin@driftpro.no / admin123
-        </p>
-        <p style={{ margin: '0', fontSize: '12px' }}>
-          Manager: manager@driftpro.no / manager123
-        </p>
+        <button
+          type="button"
+          onClick={() => {
+            // TODO: Implement forgot password functionality
+            alert('Glemt passord funksjonalitet kommer snart!');
+          }}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#3c8dbc',
+            fontSize: '14px',
+            cursor: 'pointer',
+            textDecoration: 'underline',
+            transition: 'color 0.3s'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.color = '#367fa9'}
+          onMouseLeave={(e) => e.currentTarget.style.color = '#3c8dbc'}
+        >
+          Glemt passord?
+        </button>
       </div>
     </div>
   );
