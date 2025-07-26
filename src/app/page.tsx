@@ -7,8 +7,20 @@ import CompanySelector from '../components/CompanySelector';
 import LoginForm from '../components/LoginForm';
 
 export default function HomePage() {
-  const { currentUser, adminUser, selectedCompany } = useAuth();
+  const { currentUser, adminUser, selectedCompany, loading } = useAuth();
   const [tempSelectedCompany, setTempSelectedCompany] = useState<Company | null>(null);
+
+  // Show loading spinner while Firebase auth is initializing
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Laster...</p>
+        </div>
+      </div>
+    );
+  }
 
   // If user is authenticated and company is selected, show dashboard
   if (currentUser && adminUser && selectedCompany) {

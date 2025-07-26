@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useState, useEffect } from 'react';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { Company } from '../types';
 
 interface CompanySelectorProps {
@@ -10,49 +11,126 @@ interface CompanySelectorProps {
 
 export default function CompanySelector({ onCompanySelect }: CompanySelectorProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock companies data
-  const mockCompanies: Company[] = [
-    {
-      id: '1',
-      name: 'DriftPro AS',
-      email: 'kontakt@driftpro.no',
-      logoURL: null,
-      primaryColor: '#3B82F6',
-      secondaryColor: '#1E40AF',
-      address: 'Storgata 1, 0001 Oslo',
-      phoneNumber: '+47 123 45 678',
-      website: 'https://driftpro.no',
-      description: 'Ledende leverandør av drift og vedlikehold',
-      adminUserId: 'admin1',
-      isActive: true,
-      subscriptionPlan: 'enterprise',
-      createdAt: new Date(),
-      updatedAt: new Date()
-    },
-    {
-      id: '2',
-      name: 'Vedlikehold Norge AS',
-      email: 'info@vedlikehold.no',
-      logoURL: null,
-      primaryColor: '#10B981',
-      secondaryColor: '#059669',
-      address: 'Karl Johans gate 10, 0154 Oslo',
-      phoneNumber: '+47 987 65 432',
-      website: 'https://vedlikehold.no',
-      description: 'Profesjonell vedlikeholdstjeneste',
-      adminUserId: 'admin2',
-      isActive: true,
-      subscriptionPlan: 'premium',
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }
-  ];
+  // Fetch companies from Firebase
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      try {
+        setLoading(true);
+        const companiesRef = collection(db, 'companies');
+        const q = query(companiesRef, where('isActive', '==', true));
+        const querySnapshot = await getDocs(q);
+        
+        const companiesData: Company[] = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          companiesData.push({
+            id: doc.id,
+            name: data.name || '',
+            email: data.email || '',
+            logoURL: data.logoURL || null,
+            primaryColor: data.primaryColor || '#3B82F6',
+            secondaryColor: data.secondaryColor || '#1E40AF',
+            address: data.address || '',
+            phoneNumber: data.phoneNumber || '',
+            website: data.website || '',
+            description: data.description || '',
+            adminUserId: data.adminUserId || '',
+            isActive: data.isActive || true,
+            subscriptionPlan: data.subscriptionPlan || 'basic',
+            createdAt: data.createdAt?.toDate() || new Date(),
+            updatedAt: data.updatedAt?.toDate() || new Date()
+          });
+        });
+        
+        setCompanies(companiesData);
+      } catch (err) {
+        console.error('Error fetching companies:', err);
+        setError('Kunne ikke hente bedrifter fra databasen');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const filteredCompanies = mockCompanies.filter(company =>
+    fetchCompanies();
+  }, []);
+
+  const filteredCompanies = companies.filter(company =>
     company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     company.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  if (loading) {
+    return (
+      <div style={{ 
+        maxWidth: '600px', 
+        margin: '0 auto', 
+        padding: '20px',
+        textAlign: 'center'
+      }}>
+        <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+          <h1 style={{ 
+            fontSize: '32px', 
+            fontWeight: '700', 
+            color: '#3c8dbc',
+            marginBottom: '10px'
+          }}>
+            DriftPro Admin Panel
+          </h1>
+          <p style={{ 
+            fontSize: '16px', 
+            color: '#6c757d',
+            marginBottom: '30px'
+          }}>
+            Laster bedrifter...
+          </p>
+        </div>
+        <div style={{ 
+          textAlign: 'center', 
+          padding: '40px 20px',
+          color: '#3c8dbc'
+        }}>
+          <i className="fas fa-spinner fa-spin" style={{ fontSize: '48px', marginBottom: '15px' }}></i>
+          <p>Henter bedrifter fra databasen...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ 
+        maxWidth: '600px', 
+        margin: '0 auto', 
+        padding: '20px',
+        textAlign: 'center'
+      }}>
+        <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+          <h1 style={{ 
+            fontSize: '32px', 
+            fontWeight: '700', 
+            color: '#3c8dbc',
+            marginBottom: '10px'
+          }}>
+            DriftPro Admin Panel
+          </h1>
+        </div>
+        <div style={{ 
+          padding: '20px', 
+          backgroundColor: '#f8d7da', 
+          color: '#721c24', 
+          borderRadius: '8px',
+          border: '1px solid #f5c6cb'
+        }}>
+          <i className="fas fa-exclamation-triangle" style={{ fontSize: '24px', marginBottom: '10px' }}></i>
+          <p style={{ margin: '0' }}>{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: '600px', margin: '0 auto', padding: '20px' }}>
@@ -200,16 +278,16 @@ export default function CompanySelector({ onCompanySelect }: CompanySelectorProp
         </div>
       )}
 
-      {!searchTerm && (
+      {!searchTerm && companies.length === 0 && (
         <div style={{ 
           textAlign: 'center', 
           padding: '40px 20px',
           color: '#6c757d'
         }}>
           <i className="fas fa-building" style={{ fontSize: '48px', marginBottom: '15px', opacity: '0.5' }}></i>
-          <h3 style={{ margin: '0 0 10px 0', fontSize: '18px' }}>Velg din bedrift</h3>
+          <h3 style={{ margin: '0 0 10px 0', fontSize: '18px' }}>Ingen bedrifter tilgjengelig</h3>
           <p style={{ margin: '0', fontSize: '14px' }}>
-            Klikk på en bedrift for å logge inn
+            Kontakt administrator for å få tilgang til en bedrift
           </p>
         </div>
       )}

@@ -9,6 +9,11 @@ interface LoginFormProps {
   onBack: () => void;
 }
 
+interface FirebaseError {
+  code: string;
+  message: string;
+}
+
 export default function LoginForm({ selectedCompany, onBack }: LoginFormProps) {
   const { login, selectCompany } = useAuth();
   const [email, setEmail] = useState('');
@@ -40,7 +45,22 @@ export default function LoginForm({ selectedCompany, onBack }: LoginFormProps) {
       
     } catch (err: unknown) {
       console.error('Login error:', err);
-      setError('Kunne ikke logge inn. Prøv igjen.');
+      
+      // Handle specific Firebase auth errors
+      const firebaseError = err as FirebaseError;
+      if (firebaseError.code === 'auth/user-not-found') {
+        setError('Bruker ikke funnet. Sjekk e-postadressen.');
+      } else if (firebaseError.code === 'auth/wrong-password') {
+        setError('Feil passord. Prøv igjen.');
+      } else if (firebaseError.code === 'auth/invalid-email') {
+        setError('Ugyldig e-postadresse.');
+      } else if (firebaseError.code === 'auth/too-many-requests') {
+        setError('For mange mislykkede forsøk. Prøv igjen senere.');
+      } else if (firebaseError.code === 'auth/user-disabled') {
+        setError('Brukerkontoen er deaktivert.');
+      } else {
+        setError('Kunne ikke logge inn. Prøv igjen.');
+      }
     } finally {
       setLoading(false);
     }
@@ -236,13 +256,13 @@ export default function LoginForm({ selectedCompany, onBack }: LoginFormProps) {
         color: '#6c757d'
       }}>
         <p style={{ margin: '0 0 10px 0' }}>
-          <strong>Demo innlogging:</strong>
+          <strong>Firebase Authentication:</strong>
         </p>
         <p style={{ margin: '0 0 5px 0' }}>
-          E-post: <code>admin@driftpro.no</code>
+          Bruk din Firebase brukerkonto
         </p>
         <p style={{ margin: '0' }}>
-          Passord: <code>admin123</code>
+          Kontakt administrator for tilgang
         </p>
       </div>
     </div>

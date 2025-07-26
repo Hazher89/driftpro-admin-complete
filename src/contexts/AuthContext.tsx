@@ -1,6 +1,8 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { onAuthStateChanged, User as FirebaseUser, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { auth } from '../lib/firebase';
 import { Company, User } from '../types';
 
 interface AuthContextType {
@@ -8,8 +10,9 @@ interface AuthContextType {
   adminUser: User | null;
   selectedCompany: Company | null;
   login: (email: string, password: string) => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<void>;
   selectCompany: (company: Company) => void;
+  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -18,44 +21,84 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [adminUser, setAdminUser] = useState<User | null>(null);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Listen for Firebase auth state changes
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+      if (firebaseUser) {
+        // Convert Firebase user to our User type
+        const user: User = {
+          id: firebaseUser.uid,
+          email: firebaseUser.email || '',
+          firstName: firebaseUser.displayName?.split(' ')[0] || '',
+          lastName: firebaseUser.displayName?.split(' ').slice(1).join(' ') || '',
+          role: 'admin', // Default to admin for now
+          companyId: '',
+          departmentId: '',
+          isActive: true,
+          permissions: ['read', 'write', 'admin'],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          lastLoginAt: new Date(),
+          profileImageURL: firebaseUser.photoURL,
+          phoneNumber: firebaseUser.phoneNumber || '',
+          position: 'System Administrator'
+        };
+        
+        setCurrentUser(user);
+        setAdminUser(user);
+      } else {
+        setCurrentUser(null);
+        setAdminUser(null);
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    // Mock login - replace with real Firebase auth
-    if (email === 'admin@driftpro.no' && password === 'admin123') {
-      const user: User = {
-        id: 'admin1',
-        email: 'admin@driftpro.no',
-        firstName: 'Admin',
-        lastName: 'DriftPro',
-        role: 'admin',
-        companyId: '1',
-        departmentId: 'dept1',
-        isActive: true,
-        permissions: ['read', 'write', 'admin'],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        lastLoginAt: new Date(),
-        profileImageURL: null,
-        phoneNumber: '+47 123 45 678',
-        position: 'System Administrator'
-      };
-      
-      setCurrentUser(user);
-      setAdminUser(user);
-      return true;
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      return !!userCredential.user;
+    } catch (error) {
+      console.error('Login error:', error);
+      return false;
     }
-    return false;
   };
 
-  const logout = () => {
-    setCurrentUser(null);
-    setAdminUser(null);
-    setSelectedCompany(null);
+  const logout = async () => {
+    try {
+      await signOut(auth);
+      setCurrentUser(null);
+      setAdminUser(null);
+      setSelectedCompany(null);
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   const selectCompany = (company: Company) => {
     setSelectedCompany(company);
   };
+
+  if (loading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        color: '#3c8dbc'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <i className="fas fa-spinner fa-spin" style={{ fontSize: '48px', marginBottom: '20px' }}></i>
+          <p>Laster...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <AuthContext.Provider value={{
@@ -64,7 +107,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       selectedCompany,
       login,
       logout,
-      selectCompany
+      selectCompany,
+      loading
     }}>
       {children}
     </AuthContext.Provider>
