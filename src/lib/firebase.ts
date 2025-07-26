@@ -14,15 +14,35 @@ const firebaseConfig = {
 
 // Initialize Firebase only if config is valid and not already initialized
 let app;
-if (firebaseConfig.apiKey && firebaseConfig.projectId && getApps().length === 0) {
-  app = initializeApp(firebaseConfig);
+if (firebaseConfig.apiKey && firebaseConfig.projectId) {
+  if (getApps().length === 0) {
+    app = initializeApp(firebaseConfig);
+  } else {
+    app = getApps()[0];
+  }
 } else {
-  app = getApps()[0] || null;
+  console.error('Firebase config is missing required fields:', {
+    apiKey: !!firebaseConfig.apiKey,
+    projectId: !!firebaseConfig.projectId
+  });
+  app = null;
 }
 
 // Initialize Firebase services only if app exists
 export const auth = app ? getAuth(app) : null;
 export const db = app ? getFirestore(app) : null;
 export const storage = app ? getStorage(app) : null;
+
+// Debug logging
+console.log('Firebase initialization:', {
+  hasApp: !!app,
+  hasAuth: !!auth,
+  hasDb: !!db,
+  hasStorage: !!storage,
+  config: {
+    apiKey: firebaseConfig.apiKey ? 'SET' : 'MISSING',
+    projectId: firebaseConfig.projectId ? 'SET' : 'MISSING'
+  }
+});
 
 export default app; 

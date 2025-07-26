@@ -60,7 +60,11 @@ export class FirebaseService {
   // Company methods
   static async searchCompanies(searchTerm: string): Promise<Company[]> {
     if (!db) {
-      console.warn('Firebase not initialized');
+      console.error('Firebase not initialized - db is null');
+      console.log('Firebase config check:', {
+        apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY ? 'SET' : 'MISSING',
+        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ? 'SET' : 'MISSING'
+      });
       return [];
     }
 
