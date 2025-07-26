@@ -275,25 +275,33 @@ export class FirebaseService {
 
     try {
       const usersRef = collection(db, 'users');
-      const q = query(
-        usersRef,
-        where('companyId', '==', companyId),
-        where('isActive', '==', true),
-        orderBy('firstName')
-      );
+      // Forenklet spørring uten sammensatte filtre
+      const q = query(usersRef);
       
       const querySnapshot = await getDocs(q);
       const users: User[] = [];
       
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        users.push({
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          lastLoginAt: data.lastLoginAt?.toDate(),
-          birthday: data.birthday?.toDate()
-        } as User);
+        // Filtrer på klient-siden for å unngå index-problemer
+        if (data.companyId === companyId && data.isActive !== false) {
+          users.push({
+            id: doc.id,
+            email: data.email || '',
+            firstName: data.firstName || '',
+            lastName: data.lastName || '',
+            role: data.role || 'employee',
+            companyId: data.companyId || '',
+            department: data.department || '',
+            phoneNumber: data.phoneNumber || '',
+            profileImageURL: data.profileImageURL || '',
+            isActive: data.isActive !== false,
+            createdAt: data.createdAt?.toDate() || new Date(),
+            lastLoginAt: data.lastLoginAt?.toDate(),
+            birthday: data.birthday?.toDate(),
+            employeeId: data.employeeId || ''
+          } as User);
+        }
       });
       
       return users;
@@ -479,8 +487,90 @@ export class FirebaseService {
       }
 
       console.log('Test companies added successfully');
+      
+      // Legg til test-brukere for DriftPro AS
+      await this.addTestUsers();
     } catch (error) {
       console.error('Error adding test companies:', error);
+    }
+  }
+
+  static async addTestUsers() {
+    if (!db) {
+      console.warn('Firebase not initialized');
+      return;
+    }
+
+    try {
+      const usersRef = collection(db, 'users');
+      
+      // Først finn DriftPro AS company ID
+      const companiesRef = collection(db, 'companies');
+      const companiesSnapshot = await getDocs(companiesRef);
+      let driftproCompanyId = '';
+      
+      companiesSnapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.name === 'DriftPro AS') {
+          driftproCompanyId = doc.id;
+        }
+      });
+
+      if (!driftproCompanyId) {
+        console.log('DriftPro AS company not found, skipping test users');
+        return;
+      }
+
+      const testUsers = [
+        {
+          email: 'admin@driftpro.no',
+          firstName: 'Admin',
+          lastName: 'DriftPro',
+          role: 'admin' as const,
+          companyId: driftproCompanyId,
+          department: 'Administrasjon',
+          phoneNumber: '+47 123 45 678',
+          isActive: true,
+          createdAt: new Date(),
+          lastLoginAt: new Date(),
+          employeeId: 'EMP001'
+        },
+        {
+          email: 'manager@driftpro.no',
+          firstName: 'Manager',
+          lastName: 'DriftPro',
+          role: 'manager' as const,
+          companyId: driftproCompanyId,
+          department: 'Ledelse',
+          phoneNumber: '+47 123 45 679',
+          isActive: true,
+          createdAt: new Date(),
+          lastLoginAt: new Date(),
+          employeeId: 'EMP002'
+        },
+        {
+          email: 'employee@driftpro.no',
+          firstName: 'Employee',
+          lastName: 'DriftPro',
+          role: 'employee' as const,
+          companyId: driftproCompanyId,
+          department: 'Teknisk',
+          phoneNumber: '+47 123 45 680',
+          isActive: true,
+          createdAt: new Date(),
+          lastLoginAt: new Date(),
+          employeeId: 'EMP003'
+        }
+      ];
+
+      for (const user of testUsers) {
+        await addDoc(usersRef, user);
+        console.log(`Added test user: ${user.email}`);
+      }
+
+      console.log('Test users added successfully');
+    } catch (error) {
+      console.error('Error adding test users:', error);
     }
   }
 } 
