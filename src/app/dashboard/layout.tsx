@@ -8,7 +8,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { currentUser, adminUser, selectedCompany, logout } = useAuth();
+  const { currentUser, adminUser, selectedCompany } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   if (!currentUser || !adminUser || !selectedCompany) {

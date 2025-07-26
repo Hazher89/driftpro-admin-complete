@@ -45,23 +45,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setCurrentUser(null);
               setAdminUser(null);
             }
-          } else {
-            // No company selected yet, just set the Firebase user
-            setCurrentUser({ 
-              id: firebaseUser.uid, 
-              email: firebaseUser.email || '', 
-              name: firebaseUser.displayName || '',
-              role: 'admin',
-              companyId: ''
-            } as User);
-            setAdminUser({ 
-              id: firebaseUser.uid, 
-              email: firebaseUser.email || '', 
-              name: firebaseUser.displayName || '',
-              role: 'admin',
-              companyId: ''
-            } as User);
-          }
+                     } else {
+             // No company selected yet, just set the Firebase user
+             const displayName = firebaseUser.displayName || '';
+             const nameParts = displayName.split(' ');
+             
+             setCurrentUser({ 
+               id: firebaseUser.uid, 
+               email: firebaseUser.email || '', 
+               firstName: nameParts[0] || '',
+               lastName: nameParts.slice(1).join(' ') || '',
+               role: 'admin',
+               companyId: '',
+               isActive: true,
+               createdAt: new Date()
+             } as User);
+             setAdminUser({ 
+               id: firebaseUser.uid, 
+               email: firebaseUser.email || '', 
+               firstName: nameParts[0] || '',
+               lastName: nameParts.slice(1).join(' ') || '',
+               role: 'admin',
+               companyId: '',
+               isActive: true,
+               createdAt: new Date()
+             } as User);
+           }
         } catch (error) {
           console.error('Error getting user data:', error);
           setCurrentUser(null);

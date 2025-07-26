@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { FirebaseService, Company } from '../lib/firebase-service';
 
@@ -11,7 +11,7 @@ export default function CompanySelector() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSearch = async () => {
+  const handleSearch = useCallback(async () => {
     if (!searchTerm.trim()) {
       setCompanies([]);
       return;
@@ -29,7 +29,7 @@ export default function CompanySelector() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchTerm]);
 
   const handleCompanySelect = async (company: Company) => {
     setLoading(true);
@@ -60,7 +60,7 @@ export default function CompanySelector() {
     }, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [searchTerm]);
+  }, [searchTerm, handleSearch]);
 
   return (
     <div style={{ maxWidth: '600px', margin: '0 auto', padding: '20px' }}>

@@ -6,13 +6,7 @@ import {
   doc, 
   getDoc, 
   addDoc, 
-  updateDoc, 
-  deleteDoc,
-  orderBy,
-  limit,
-  startAfter,
-  QueryDocumentSnapshot,
-  DocumentData
+  orderBy
 } from 'firebase/firestore';
 import { 
   signInWithEmailAndPassword, 
