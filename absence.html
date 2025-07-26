@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DriftPro - Fravær og Sykdom</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .absence-card {
+            transition: all 0.3s ease;
+        }
+        .absence-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+        .status-pending { background: linear-gradient(135deg, #fbbf24, #f59e0b); }
+        .status-approved { background: linear-gradient(135deg, #10b981, #059669); }
+        .status-rejected { background: linear-gradient(135deg, #ef4444, #dc2626); }
+        .status-sick { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 min-h-screen">
+    <header class="bg-white/10 backdrop-blur-lg border-b border-white/20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center space-x-4">
+                    <button onclick="window.location.href='dashboard.html'" class="text-white hover:text-gray-300 transition-colors">
+                        <i class="fas fa-arrow-left text-xl"></i>
+                    </button>
+                    <div>
+                        <h1 class="text-2xl font-bold text-white">Fravær og Sykdom</h1>
+                        <p class="text-gray-300">Administrer ansattes fravær og sykemeldinger</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span id="userName" class="text-white font-medium"></span>
+                    <button onclick="logout()" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-all duration-200">
+                        <i class="fas fa-sign-out-alt mr-2"></i>Logg ut
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="glass-effect rounded-2xl p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-300 text-sm">Totalt Fravær</p>
+                        <p class="text-2xl font-bold text-white" id="totalAbsence">0</p>
+                    </div>
+                    <div class="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center">
+                        <i class="fas fa-calendar-times text-blue-400 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="glass-effect rounded-2xl p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-300 text-sm">Venter på Godkjenning</p>
+                        <p class="text-2xl font-bold text-white" id="pendingAbsence">0</p>
+                    </div>
+                    <div class="w-12 h-12 bg-yellow-500/20 rounded-full flex items-center justify-center">
+                        <i class="fas fa-clock text-yellow-400 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="glass-effect rounded-2xl p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-300 text-sm">Godkjent Fravær</p>
+                        <p class="text-2xl font-bold text-white" id="approvedAbsence">0</p>
+                    </div>
+                    <div class="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center">
+                        <i class="fas fa-check-circle text-green-400 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="glass-effect rounded-2xl p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-300 text-sm">Sykemeldinger</p>
+                        <p class="text-2xl font-bold text-white" id="sickAbsence">0</p>
+                    </div>
+                    <div class="w-12 h-12 bg-purple-500/20 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user-injured text-purple-400 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap gap-4 mb-8">
+            <button onclick="showCreateAbsenceModal()" class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg">
+                <i class="fas fa-plus mr-2"></i>Registrer Fravær
+            </button>
+            <button onclick="showBulkApprovalModal()" class="bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-3 rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-lg">
+                <i class="fas fa-check-double mr-2"></i>Massegodkjenning
+            </button>
+            <button onclick="exportAbsenceData()" class="bg-gradient-to-r from-purple-500 to-purple-600 text-white px-6 py-3 rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all duration-200 shadow-lg">
+                <i class="fas fa-download mr-2"></i>Eksporter Data
+            </button>
+        </div>
+
+        <div class="glass-effect rounded-2xl p-6 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Status</label>
+                    <select id="statusFilter" class="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:ring-2 focus:ring-blue-500">
+                        <option value="">Alle statuser</option>
+                        <option value="pending">Venter</option>
+                        <option value="approved">Godkjent</option>
+                        <option value="rejected">Avvist</option>
+                        <option value="sick">Sykemelding</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Ansatt</label>
+                    <select id="employeeFilter" class="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:ring-2 focus:ring-blue-500">
+                        <option value="">Alle ansatte</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Fra Dato</label>
+                    <input type="date" id="startDateFilter" class="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Til Dato</label>
+                    <input type="date" id="endDateFilter" class="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+        </div>
+
+        <div class="glass-effect rounded-2xl shadow-xl">
+            <div class="px-6 py-4 border-b border-white/20">
+                <h3 class="text-xl font-bold text-white">Fraværsoversikt</h3>
+            </div>
+            <div class="p-6">
+                <div id="absenceList" class="space-y-4">
+                    <div class="text-center py-8">
+                        <i class="fas fa-calendar-times text-gray-400 text-4xl mb-4"></i>
+                        <p class="text-gray-400">Ingen fravær funnet</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
+            authDomain: "driftpro-40ccd.firebaseapp.com",
+            projectId: "driftpro-40ccd",
+            storageBucket: "driftpro-40ccd.appspot.com",
+            messagingSenderId: "123456789012",
+            appId: "1:123456789012:web:abcdef1234567890"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        let currentUser = null;
+        let currentCompanyId = null;
+        let employees = [];
+        let absences = [];
+
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                currentUser = user;
+                showDashboard(user);
+            } else {
+                window.location.href = '/';
+            }
+        });
+
+        async function showDashboard(user) {
+            document.getElementById('userName').textContent = user.email;
+            
+            try {
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                const userData = userDoc.data();
+                currentCompanyId = userData?.companyId;
+                
+                if (!currentCompanyId) {
+                    console.error('No company ID found for user');
+                    return;
+                }
+                
+                await loadEmployees();
+                await loadAbsences();
+                updateStats();
+            } catch (error) {
+                console.error('Error loading user data:', error);
+            }
+        }
+
+        async function loadEmployees() {
+            try {
+                const employeesSnapshot = await db.collection('users')
+                    .where('companyId', '==', currentCompanyId)
+                    .get();
+                
+                employees = [];
+                employeesSnapshot.forEach(doc => {
+                    employees.push({ id: doc.id, ...doc.data() });
+                });
+                
+                const employeeFilter = document.getElementById('employeeFilter');
+                employeeFilter.innerHTML = '<option value="">Alle ansatte</option>';
+                employees.forEach(employee => {
+                    const option = document.createElement('option');
+                    option.value = employee.id;
+                    option.textContent = employee.name || employee.email;
+                    employeeFilter.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading employees:', error);
+            }
+        }
+
+        async function loadAbsences() {
+            try {
+                const absencesSnapshot = await db.collection('absences')
+                    .where('companyId', '==', currentCompanyId)
+                    .orderBy('startDate', 'desc')
+                    .get();
+                
+                absences = [];
+                absencesSnapshot.forEach(doc => {
+                    absences.push({ id: doc.id, ...doc.data() });
+                });
+                
+                renderAbsences();
+            } catch (error) {
+                console.error('Error loading absences:', error);
+            }
+        }
+
+        function renderAbsences() {
+            const absenceList = document.getElementById('absenceList');
+            
+            if (absences.length === 0) {
+                absenceList.innerHTML = `
+                    <div class="text-center py-8">
+                        <i class="fas fa-calendar-times text-gray-400 text-4xl mb-4"></i>
+                        <p class="text-gray-400">Ingen fravær funnet</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            absenceList.innerHTML = absences.map(absence => {
+                const employee = employees.find(emp => emp.id === absence.employeeId);
+                const startDate = new Date(absence.startDate).toLocaleDateString('no-NO');
+                const endDate = new Date(absence.endDate).toLocaleDateString('no-NO');
+                
+                let statusClass = '';
+                let statusText = '';
+                let statusIcon = '';
+                
+                switch(absence.status) {
+                    case 'pending':
+                        statusClass = 'status-pending';
+                        statusText = 'Venter';
+                        statusIcon = 'fas fa-clock';
+                        break;
+                    case 'approved':
+                        statusClass = 'status-approved';
+                        statusText = 'Godkjent';
+                        statusIcon = 'fas fa-check-circle';
+                        break;
+                    case 'rejected':
+                        statusClass = 'status-rejected';
+                        statusText = 'Avvist';
+                        statusIcon = 'fas fa-times-circle';
+                        break;
+                    case 'sick':
+                        statusClass = 'status-sick';
+                        statusText = 'Sykemelding';
+                        statusIcon = 'fas fa-user-injured';
+                        break;
+                }
+                
+                let typeText = '';
+                switch(absence.type) {
+                    case 'vacation': typeText = 'Ferie'; break;
+                    case 'sick': typeText = 'Sykemelding'; break;
+                    case 'personal': typeText = 'Personlig'; break;
+                    case 'other': typeText = 'Annet'; break;
+                }
+                
+                return `
+                    <div class="absence-card glass-effect rounded-xl p-6">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-4">
+                                <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold">
+                                    ${employee?.name?.charAt(0)?.toUpperCase() || 'A'}
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-white">${employee?.name || 'Ukjent ansatt'}</h4>
+                                    <p class="text-gray-300 text-sm">${typeText} • ${startDate} - ${endDate}</p>
+                                    ${absence.description ? `<p class="text-gray-400 text-sm mt-1">${absence.description}</p>` : ''}
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <span class="px-3 py-1 rounded-full text-white text-sm font-medium ${statusClass}">
+                                    <i class="${statusIcon} mr-1"></i>${statusText}
+                                </span>
+                                <div class="flex space-x-2">
+                                    ${absence.status === 'pending' ? `
+                                        <button onclick="approveAbsence('${absence.id}')" class="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        <button onclick="rejectAbsence('${absence.id}')" class="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    ` : ''}
+                                    <button onclick="editAbsence('${absence.id}')" class="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button onclick="deleteAbsence('${absence.id}')" class="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateStats() {
+            const total = absences.length;
+            const pending = absences.filter(a => a.status === 'pending').length;
+            const approved = absences.filter(a => a.status === 'approved').length;
+            const sick = absences.filter(a => a.type === 'sick').length;
+            
+            document.getElementById('totalAbsence').textContent = total;
+            document.getElementById('pendingAbsence').textContent = pending;
+            document.getElementById('approvedAbsence').textContent = approved;
+            document.getElementById('sickAbsence').textContent = sick;
+        }
+
+        function showCreateAbsenceModal() {
+            alert('Registrer fravær kommer snart!');
+        }
+
+        function showBulkApprovalModal() {
+            alert('Massegodkjenning kommer snart!');
+        }
+
+        function exportAbsenceData() {
+            alert('Eksport kommer snart!');
+        }
+
+        async function approveAbsence(absenceId) {
+            try {
+                await db.collection('absences').doc(absenceId).update({
+                    status: 'approved',
+                    approvedBy: currentUser.email,
+                    approvedAt: new Date()
+                });
+                await loadAbsences();
+                updateStats();
+                alert('Fravær godkjent!');
+            } catch (error) {
+                console.error('Error approving absence:', error);
+                alert('Feil ved godkjenning');
+            }
+        }
+
+        async function rejectAbsence(absenceId) {
+            try {
+                await db.collection('absences').doc(absenceId).update({
+                    status: 'rejected',
+                    approvedBy: currentUser.email,
+                    approvedAt: new Date()
+                });
+                await loadAbsences();
+                updateStats();
+                alert('Fravær avvist!');
+            } catch (error) {
+                console.error('Error rejecting absence:', error);
+                alert('Feil ved avvisning');
+            }
+        }
+
+        function editAbsence(absenceId) {
+            alert('Redigering kommer snart!');
+        }
+
+        async function deleteAbsence(absenceId) {
+            if (!confirm('Er du sikker på at du vil slette dette fraværet?')) return;
+            
+            try {
+                await db.collection('absences').doc(absenceId).delete();
+                await loadAbsences();
+                updateStats();
+                alert('Fravær slettet!');
+            } catch (error) {
+                console.error('Error deleting absence:', error);
+                alert('Feil ved sletting');
+            }
+        }
+
+        function logout() {
+            auth.signOut().then(() => {
+                window.location.href = '/';
+            }).catch(error => {
+                console.error('Error logging out:', error);
+            });
+        }
+    </script>
+</body>
+</html>

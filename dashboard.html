@@ -178,7 +178,7 @@
                                 </svg>
                             </div>
                             <div class="ml-4">
-                                <p class="text-sm font-medium text-gray-300">Avvik</p>
+                                <p class="text-sm font-medium text-gray-300">Stempel-system</p>
                                 <p class="text-3xl font-bold text-white">${data.deviations.length}</p>
                             </div>
                         </div>
@@ -213,7 +213,7 @@
                     <!-- Recent Deviations -->
                     <div class="glass-effect rounded-2xl shadow-xl">
                         <div class="px-6 py-4 border-b border-white/20">
-                            <h3 class="text-xl font-bold text-white">Siste Avvik</h3>
+                            <h3 class="text-xl font-bold text-white">Siste Stempel-system</h3>
                         </div>
                         <div class="p-6">
                             ${data.deviations.slice(0, 5).map(deviation => `
@@ -263,7 +263,7 @@
                                 </ul>
                             </div>
                             <div class="bg-gradient-to-br from-yellow-500/20 to-yellow-600/20 p-6 rounded-xl border border-yellow-500/30">
-                                <h4 class="font-bold text-yellow-300 mb-4">Dokumenter (${data.documents.length})</h4>
+                                <h4 class="font-bold text-yellow-300 mb-4">Ferieadministrasjon (${data.documents.length})</h4>
                                 <ul class="space-y-2 text-yellow-200">
                                     ${data.documents.map(doc => `<li class="flex items-center"><span class="w-2 h-2 bg-yellow-400 rounded-full mr-3"></span>${doc.title || doc.id}</li>`).join('')}
                                 </ul>
@@ -354,7 +354,7 @@
                     </div>
                 </a>
                 
-                <a href="/deviations.html" class="glass-effect rounded-2xl p-6 hover:bg-white/20 transition-all duration-300 transform hover:scale-105 shadow-xl group">
+                <a href="/timeclock.html" class="glass-effect rounded-2xl p-6 hover:bg-white/20 transition-all duration-300 transform hover:scale-105 shadow-xl group">
                     <div class="flex items-center">
                         <div class="p-4 rounded-xl bg-gradient-to-br from-red-500 to-red-600 text-white shadow-lg group-hover:scale-110 transition-transform duration-300">
                             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -362,13 +362,13 @@
                             </svg>
                         </div>
                         <div class="ml-4">
-                            <p class="text-lg font-bold text-white">Avvik</p>
-                            <p class="text-sm text-gray-300">Håndter avvik</p>
+                            <p class="text-lg font-bold text-white">Stempel-system</p>
+                            <p class="text-sm text-gray-300">Stempel-system</p>
                         </div>
                     </div>
                 </a>
                 
-                <a href="/shifts.html" class="glass-effect rounded-2xl p-6 hover:bg-white/20 transition-all duration-300 transform hover:scale-105 shadow-xl group">
+                <a href="/absence.html" class="glass-effect rounded-2xl p-6 hover:bg-white/20 transition-all duration-300 transform hover:scale-105 shadow-xl group">
                     <div class="flex items-center">
                         <div class="p-4 rounded-xl bg-gradient-to-br from-yellow-500 to-yellow-600 text-white shadow-lg group-hover:scale-110 transition-transform duration-300">
                             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -376,8 +376,8 @@
                             </svg>
                         </div>
                         <div class="ml-4">
-                            <p class="text-lg font-bold text-white">Skiftplaner</p>
-                            <p class="text-sm text-gray-300">Planlegg skift</p>
+                            <p class="text-lg font-bold text-white">Fravær og Sykdom</p>
+                            <p class="text-sm text-gray-300">Fravær og sykdom</p>
                         </div>
                     </div>
                 </a>
@@ -396,7 +396,7 @@
                     </div>
                 </a>
                 
-                <a href="/documents.html" class="glass-effect rounded-2xl p-6 hover:bg-white/20 transition-all duration-300 transform hover:scale-105 shadow-xl group">
+                <a href="/vacation.html" class="glass-effect rounded-2xl p-6 hover:bg-white/20 transition-all duration-300 transform hover:scale-105 shadow-xl group">
                     <div class="flex items-center">
                         <div class="p-4 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-lg group-hover:scale-110 transition-transform duration-300">
                             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -404,8 +404,8 @@
                             </svg>
                         </div>
                         <div class="ml-4">
-                            <p class="text-lg font-bold text-white">Dokumenter</p>
-                            <p class="text-sm text-gray-300">Fildokumenter</p>
+                            <p class="text-lg font-bold text-white">Ferieadministrasjon</p>
+                            <p class="text-sm text-gray-300">Ferie og permisjoner</p>
                         </div>
                     </div>
                 </a>
