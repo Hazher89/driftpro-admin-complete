@@ -3,18 +3,76 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
+interface Company {
+  id: string;
+  name: string;
+  industry: string;
+  employees: number;
+  address?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  isActive: boolean;
+  createdAt: Date;
+  settings?: {
+    enableDeviationReporting?: boolean;
+    enableRiskAnalysis?: boolean;
+    enableDocumentArchive?: boolean;
+    enableInternalControl?: boolean;
+    enableChat?: boolean;
+    enableBirthdayCalendar?: boolean;
+    maxFileSizeMB?: number;
+    allowedFileTypes?: string[];
+  };
+}
+
 export default function CompanySelector() {
   const { setSelectedCompany } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
 
   // Mock data - replace with real Firebase data
-  const companies = [
-    { id: '1', name: 'DriftPro AS', industry: 'Teknologi', employees: 150 },
-    { id: '2', name: 'Nordic Solutions', industry: 'Konsulent', employees: 75 },
-    { id: '3', name: 'TechCorp Norway', industry: 'IT', employees: 200 },
-    { id: '4', name: 'Innovation Labs', industry: 'Forskning', employees: 45 },
-    { id: '5', name: 'Digital Future', industry: 'Software', employees: 120 }
+  const companies: Company[] = [
+    { 
+      id: '1', 
+      name: 'DriftPro AS', 
+      industry: 'Teknologi', 
+      employees: 150,
+      isActive: true,
+      createdAt: new Date()
+    },
+    { 
+      id: '2', 
+      name: 'Nordic Solutions', 
+      industry: 'Konsulent', 
+      employees: 75,
+      isActive: true,
+      createdAt: new Date()
+    },
+    { 
+      id: '3', 
+      name: 'TechCorp Norway', 
+      industry: 'IT', 
+      employees: 200,
+      isActive: true,
+      createdAt: new Date()
+    },
+    { 
+      id: '4', 
+      name: 'Innovation Labs', 
+      industry: 'Forskning', 
+      employees: 45,
+      isActive: true,
+      createdAt: new Date()
+    },
+    { 
+      id: '5', 
+      name: 'Digital Future', 
+      industry: 'Software', 
+      employees: 120,
+      isActive: true,
+      createdAt: new Date()
+    }
   ];
 
   const filteredCompanies = companies.filter(company =>
@@ -22,7 +80,7 @@ export default function CompanySelector() {
     company.industry.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleCompanySelect = (company: any) => {
+  const handleCompanySelect = (company: Company) => {
     setLoading(true);
     // Simulate loading
     setTimeout(() => {

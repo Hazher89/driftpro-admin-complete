@@ -19,6 +19,17 @@ interface User {
   employeeId?: string;
 }
 
+interface CompanySettings {
+  enableDeviationReporting?: boolean;
+  enableRiskAnalysis?: boolean;
+  enableDocumentArchive?: boolean;
+  enableInternalControl?: boolean;
+  enableChat?: boolean;
+  enableBirthdayCalendar?: boolean;
+  maxFileSizeMB?: number;
+  allowedFileTypes?: string[];
+}
+
 interface Company {
   id: string;
   name: string;
@@ -30,7 +41,7 @@ interface Company {
   website?: string;
   isActive: boolean;
   createdAt: Date;
-  settings?: any;
+  settings?: CompanySettings;
 }
 
 interface AuthContextType {
