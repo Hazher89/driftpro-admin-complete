@@ -18,6 +18,12 @@ export default function CompanySelector({ onCompanySelect }: CompanySelectorProp
   // Fetch companies from Firebase
   useEffect(() => {
     const fetchCompanies = async () => {
+      if (!db) {
+        setError('Firebase Database er ikke tilgjengelig');
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
         const companiesRef = collection(db, 'companies');

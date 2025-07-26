@@ -1,8 +1,6 @@
-'use client';
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged, User as FirebaseUser, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { auth } from '../lib/firebase';
+import { auth, db } from '../lib/firebase';
 import { Company, User } from '../types';
 
 interface AuthContextType {
@@ -13,6 +11,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   selectCompany: (company: Company) => void;
   loading: boolean;
+  error: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,9 +21,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [adminUser, setAdminUser] = useState<User | null>(null);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Listen for Firebase auth state changes
+  // Check if Firebase is properly initialized
   useEffect(() => {
+    if (!auth || !db) {
+      setError('Firebase er ikke riktig konfigurert. Kontakt administrator.');
+      setLoading(false);
+      return;
+    }
+
+    // Listen for Firebase auth state changes
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
         // Convert Firebase user to our User type
@@ -59,6 +66,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
+    if (!auth) {
+      setError('Firebase Authentication er ikke tilgjengelig');
+      return false;
+    }
+
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       return !!userCredential.user;
@@ -69,6 +81,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    if (!auth) {
+      setError('Firebase Authentication er ikke tilgjengelig');
+      return;
+    }
+
     try {
       await signOut(auth);
       setCurrentUser(null);
@@ -100,6 +117,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
   }
 
+  if (error) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        color: '#721c24'
+      }}>
+        <div style={{ 
+          textAlign: 'center',
+          padding: '40px',
+          backgroundColor: '#f8d7da',
+          borderRadius: '8px',
+          border: '1px solid #f5c6cb',
+          maxWidth: '500px'
+        }}>
+          <i className="fas fa-exclamation-triangle" style={{ fontSize: '48px', marginBottom: '20px' }}></i>
+          <h2 style={{ margin: '0 0 20px 0' }}>Feil</h2>
+          <p style={{ margin: '0' }}>{error}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <AuthContext.Provider value={{
       currentUser,
@@ -108,7 +150,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       login,
       logout,
       selectCompany,
-      loading
+      loading,
+      error
     }}>
       {children}
     </AuthContext.Provider>
