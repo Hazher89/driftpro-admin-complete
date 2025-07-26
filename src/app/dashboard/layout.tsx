@@ -202,6 +202,14 @@ export default function DashboardLayout({
               <span className="menu-item-text">Avdelinger</span>
               <span className="menu-badge success">NEW</span>
             </a>
+            <a href="/absence" className="menu-item">
+              <i className="fas fa-calendar-times"></i>
+              <span className="menu-item-text">Fravær & Ferie</span>
+            </a>
+            <a href="/timeclock" className="menu-item">
+              <i className="fas fa-clock"></i>
+              <span className="menu-item-text">Stemple Inn/Ut</span>
+            </a>
             <a href="/chat" className="menu-item">
               <i className="fas fa-comments"></i>
               <span className="menu-item-text">Chat</span>
