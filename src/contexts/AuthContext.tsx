@@ -32,20 +32,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
         try {
-          // Get user data from Firestore
-          const users = await FirebaseService.getUsersByCompany(selectedCompany?.id || '');
-          const user = users.find(u => u.email === firebaseUser.email);
-          
-          if (user) {
-            setCurrentUser(user);
-            setAdminUser(user);
+          // Only try to get user data if we have a selected company
+          if (selectedCompany?.id) {
+            const users = await FirebaseService.getUsersByCompany(selectedCompany.id);
+            const user = users.find(u => u.email === firebaseUser.email);
+            
+            if (user) {
+              setCurrentUser(user);
+              setAdminUser(user);
+            } else {
+              console.log('User not found in current company');
+              setCurrentUser(null);
+              setAdminUser(null);
+            }
           } else {
-            // If user not found in current company, try to find them in any company
-            // This is a fallback for when company context is not set
-            console.log('User not found in current company, searching all companies...');
+            // No company selected yet, just set the Firebase user
+            setCurrentUser({ 
+              id: firebaseUser.uid, 
+              email: firebaseUser.email || '', 
+              name: firebaseUser.displayName || '',
+              role: 'admin',
+              companyId: ''
+            } as User);
+            setAdminUser({ 
+              id: firebaseUser.uid, 
+              email: firebaseUser.email || '', 
+              name: firebaseUser.displayName || '',
+              role: 'admin',
+              companyId: ''
+            } as User);
           }
         } catch (error) {
           console.error('Error getting user data:', error);
+          setCurrentUser(null);
+          setAdminUser(null);
         }
       } else {
         setCurrentUser(null);

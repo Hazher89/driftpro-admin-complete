@@ -1,12 +1,11 @@
 'use client';
 
-import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import CompanySelector from '../components/CompanySelector';
 import LoginForm from '../components/LoginForm';
 
 export default function HomePage() {
-  const { selectedCompany } = useAuth();
+  const { selectedCompany, currentUser } = useAuth();
 
   if (!selectedCompany) {
     return (
@@ -91,7 +90,29 @@ export default function HomePage() {
             {selectedCompany.name}
           </p>
         </div>
-        <LoginForm />
+        {currentUser ? (
+          <div style={{ textAlign: 'center' }}>
+            <p style={{ color: '#28a745', marginBottom: '20px' }}>
+              Du er logget inn som {currentUser.email}
+            </p>
+            <button 
+              onClick={() => window.location.href = '/dashboard'}
+              style={{
+                background: '#3c8dbc',
+                color: 'white',
+                border: 'none',
+                padding: '12px 24px',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                fontSize: '16px'
+              }}
+            >
+              Gå til Dashboard
+            </button>
+          </div>
+        ) : (
+          <LoginForm />
+        )}
       </div>
     </div>
   );
