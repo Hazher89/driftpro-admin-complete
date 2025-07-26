@@ -8,6 +8,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         .chat-container { height: calc(100vh - 120px); }
@@ -18,6 +19,11 @@
         .message-input { resize: none; min-height: 40px; max-height: 120px; }
         .private-chat { border-left: 3px solid #10b981; }
         .group-chat { border-left: 3px solid #3b82f6; }
+        .modal { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 50; display: none; }
+        .modal.show { display: flex; }
+        .file-preview { max-width: 200px; max-height: 200px; object-fit: cover; border-radius: 8px; }
+        .video-preview { max-width: 300px; max-height: 200px; border-radius: 8px; }
+        .message-media { max-width: 300px; border-radius: 8px; margin-top: 8px; }
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
@@ -107,13 +113,104 @@
                                     <button onclick="document.getElementById('fileInput').click()" class="text-gray-400 hover:text-gray-600 transition-colors">
                                         <i class="fas fa-paperclip text-lg"></i>
                                     </button>
+                                    <button onclick="document.getElementById('imageInput').click()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                                        <i class="fas fa-image text-lg"></i>
+                                    </button>
+                                    <button onclick="document.getElementById('videoInput').click()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                                        <i class="fas fa-video text-lg"></i>
+                                    </button>
                                 </div>
-                                <input type="file" id="fileInput" class="hidden" accept="image/*,.pdf,.doc,.docx">
+                                <input type="file" id="fileInput" class="hidden" accept=".pdf,.doc,.docx,.txt">
+                                <input type="file" id="imageInput" class="hidden" accept="image/*">
+                                <input type="file" id="videoInput" class="hidden" accept="video/*">
                             </div>
                             <button onclick="sendMessage()" class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-md">
                                 <i class="fas fa-paper-plane"></i>
                             </button>
                         </div>
+                        <div id="filePreview" class="mt-3 hidden">
+                            <div class="bg-gray-100 rounded-lg p-3 flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <i class="fas fa-file text-blue-500 text-xl"></i>
+                                    <div>
+                                        <p class="font-medium text-sm" id="fileName"></p>
+                                        <p class="text-xs text-gray-500" id="fileSize"></p>
+                                    </div>
+                                </div>
+                                <button onclick="removeFile()" class="text-red-500 hover:text-red-700">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="createGroupModal" class="modal">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl shadow-2xl max-w-md w-full border border-gray-200">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-semibold text-gray-900">Opprett ny gruppe</h3>
+                        <button onclick="closeCreateGroupModal()" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Gruppenavn</label>
+                            <input type="text" id="groupName" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Beskrivelse</label>
+                            <textarea id="groupDescription" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows="3"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Medlemmer</label>
+                            <div id="groupMembersList" class="max-h-32 overflow-y-auto border border-gray-300 rounded-lg p-3 bg-gray-50">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex space-x-3 mt-6">
+                        <button onclick="closeCreateGroupModal()" class="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                            Avbryt
+                        </button>
+                        <button onclick="createGroup()" class="flex-1 px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200">
+                            Opprett gruppe
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="newChatModal" class="modal">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl shadow-2xl max-w-md w-full border border-gray-200">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-semibold text-gray-900">Start ny chat</h3>
+                        <button onclick="closeNewChatModal()" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Velg bruker</label>
+                            <select id="newChatUser" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="">Velg en bruker...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex space-x-3 mt-6">
+                        <button onclick="closeNewChatModal()" class="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                            Avbryt
+                        </button>
+                        <button onclick="startNewChat()" class="flex-1 px-4 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200">
+                            Start chat
+                        </button>
                     </div>
                 </div>
             </div>
@@ -133,10 +230,12 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const auth = firebase.auth();
+        const storage = firebase.storage();
 
         let currentUser = null;
         let currentCompanyId = null;
         let currentChat = null;
+        let selectedFile = null;
 
         auth.onAuthStateChanged(user => {
             if (user) {
@@ -161,6 +260,7 @@
                 }
                 
                 await loadChats();
+                await loadUsersForNewChat();
             } catch (error) {
                 console.error('Error loading user data:', error);
             }
@@ -303,29 +403,72 @@
             const messageInput = document.getElementById('messageInput');
             const text = messageInput.value.trim();
             
-            if (!text) return;
+            if (!text && !selectedFile) return;
             
             try {
+                let messageData = {
+                    senderId: currentUser.uid,
+                    senderName: currentUser.email,
+                    timestamp: new Date(),
+                    type: 'text'
+                };
+
+                if (selectedFile) {
+                    messageData.fileUrl = URL.createObjectURL(selectedFile);
+                    messageData.fileName = selectedFile.name;
+                    messageData.fileType = selectedFile.type;
+                    messageData.type = 'file';
+                    
+                    if (selectedFile.type.startsWith('image/')) {
+                        messageData.type = 'image';
+                    } else if (selectedFile.type.startsWith('video/')) {
+                        messageData.type = 'video';
+                    }
+                }
+
+                if (text) {
+                    messageData.text = text;
+                }
+
                 const messagesContainer = document.getElementById('messagesContainer');
                 const messageElement = document.createElement('div');
                 messageElement.className = 'mb-4';
-                messageElement.innerHTML = `
+                
+                let messageContent = `
                     <div class="flex justify-end">
                         <div class="message-bubble bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg px-4 py-3 shadow-md">
                             <div class="flex items-center space-x-2 mb-1">
                                 <span class="font-semibold text-sm">Du</span>
                                 <span class="message-time text-xs">Nå</span>
                             </div>
-                            <p class="text-sm">${text}</p>
+                `;
+
+                if (text) {
+                    messageContent += `<p class="text-sm">${text}</p>`;
+                }
+
+                if (selectedFile) {
+                    if (selectedFile.type.startsWith('image/')) {
+                        messageContent += `<img src="${URL.createObjectURL(selectedFile)}" class="message-media" alt="Bilde">`;
+                    } else if (selectedFile.type.startsWith('video/')) {
+                        messageContent += `<video controls class="message-media"><source src="${URL.createObjectURL(selectedFile)}" type="${selectedFile.type}"></video>`;
+                    } else {
+                        messageContent += `<div class="mt-2"><a href="${URL.createObjectURL(selectedFile)}" target="_blank" class="text-blue-300 underline">📎 ${selectedFile.name}</a></div>`;
+                    }
+                }
+
+                messageContent += `
                         </div>
                     </div>
                 `;
                 
+                messageElement.innerHTML = messageContent;
                 messagesContainer.appendChild(messageElement);
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
                 
                 messageInput.value = '';
                 messageInput.style.height = 'auto';
+                removeFile();
                 
                 setTimeout(() => {
                     const responseElement = document.createElement('div');
@@ -351,6 +494,140 @@
             }
         }
 
+        async function loadUsersForNewChat() {
+            try {
+                const usersSnapshot = await db.collection('users').where('companyId', '==', currentCompanyId).get();
+                const select = document.getElementById('newChatUser');
+                select.innerHTML = '<option value="">Velg en bruker...</option>';
+                
+                usersSnapshot.forEach(doc => {
+                    const user = { id: doc.id, ...doc.data() };
+                    if (user.id !== currentUser.uid) {
+                        const option = document.createElement('option');
+                        option.value = user.id;
+                        option.textContent = user.name || user.email;
+                        select.appendChild(option);
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading users for new chat:', error);
+            }
+        }
+
+        async function loadUsersForGroup() {
+            try {
+                const usersSnapshot = await db.collection('users').where('companyId', '==', currentCompanyId).get();
+                const membersList = document.getElementById('groupMembersList');
+                membersList.innerHTML = '';
+                
+                usersSnapshot.forEach(doc => {
+                    const user = { id: doc.id, ...doc.data() };
+                    if (user.id !== currentUser.uid) {
+                        const div = document.createElement('div');
+                        div.className = 'flex items-center space-x-2 p-2 hover:bg-gray-100 rounded transition-colors';
+                        div.innerHTML = `
+                            <input type="checkbox" id="user_${user.id}" value="${user.id}" class="rounded">
+                            <label for="user_${user.id}" class="text-sm">${user.name || user.email}</label>
+                        `;
+                        membersList.appendChild(div);
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading users for group:', error);
+            }
+        }
+
+        function showCreateGroupModal() {
+            document.getElementById('createGroupModal').classList.add('show');
+            loadUsersForGroup();
+        }
+
+        function closeCreateGroupModal() {
+            document.getElementById('createGroupModal').classList.remove('show');
+        }
+
+        function showNewChatModal() {
+            document.getElementById('newChatModal').classList.add('show');
+        }
+
+        function closeNewChatModal() {
+            document.getElementById('newChatModal').classList.remove('show');
+        }
+
+        async function createGroup() {
+            const groupName = document.getElementById('groupName').value.trim();
+            const groupDescription = document.getElementById('groupDescription').value.trim();
+            
+            if (!groupName) {
+                alert('Vennligst fyll inn gruppenavn');
+                return;
+            }
+            
+            try {
+                const selectedMembers = Array.from(document.querySelectorAll('#groupMembersList input:checked'))
+                    .map(input => input.value);
+                selectedMembers.push(currentUser.uid);
+                
+                const groupData = {
+                    name: groupName,
+                    description: groupDescription,
+                    type: 'group',
+                    companyId: currentCompanyId,
+                    participants: selectedMembers,
+                    createdBy: currentUser.uid,
+                    createdAt: new Date(),
+                    lastMessage: '',
+                    lastMessageTime: null
+                };
+                
+                await db.collection('chats').add(groupData);
+                closeCreateGroupModal();
+                await loadChats();
+                
+                document.getElementById('groupName').value = '';
+                document.getElementById('groupDescription').value = '';
+                
+                alert('Gruppe opprettet!');
+            } catch (error) {
+                console.error('Error creating group:', error);
+                alert('Feil ved opprettelse av gruppe');
+            }
+        }
+
+        async function startNewChat() {
+            const selectedUserId = document.getElementById('newChatUser').value;
+            
+            if (!selectedUserId) {
+                alert('Vennligst velg en bruker');
+                return;
+            }
+            
+            try {
+                const selectedUserDoc = await db.collection('users').doc(selectedUserId).get();
+                const selectedUserData = selectedUserDoc.data();
+                
+                const chatData = {
+                    name: selectedUserData.name || selectedUserData.email,
+                    type: 'private',
+                    companyId: currentCompanyId,
+                    participants: [currentUser.uid, selectedUserId],
+                    createdAt: new Date(),
+                    lastMessage: '',
+                    lastMessageTime: null
+                };
+                
+                const chatRef = await db.collection('chats').add(chatData);
+                closeNewChatModal();
+                await loadChats();
+                selectChat({ id: chatRef.id, ...chatData });
+                
+                alert('Ny chat opprettet!');
+            } catch (error) {
+                console.error('Error starting new chat:', error);
+                alert('Feil ved opprettelse av chat');
+            }
+        }
+
         function formatTime(date) {
             const now = new Date();
             const diff = now - date;
@@ -369,12 +646,42 @@
             alert('Emoji-picker kommer snart!');
         }
 
-        function showCreateGroupModal() {
-            alert('Gruppe-opprettelse kommer snart!');
+        document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+        document.getElementById('imageInput').addEventListener('change', handleFileSelect);
+        document.getElementById('videoInput').addEventListener('change', handleFileSelect);
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                selectedFile = file;
+                showFilePreview(file);
+            }
         }
 
-        function showNewChatModal() {
-            alert('Ny chat kommer snart!');
+        function showFilePreview(file) {
+            const preview = document.getElementById('filePreview');
+            const fileName = document.getElementById('fileName');
+            const fileSize = document.getElementById('fileSize');
+            
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+            preview.classList.remove('hidden');
+        }
+
+        function removeFile() {
+            selectedFile = null;
+            document.getElementById('filePreview').classList.add('hidden');
+            document.getElementById('fileInput').value = '';
+            document.getElementById('imageInput').value = '';
+            document.getElementById('videoInput').value = '';
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
 
         document.getElementById('messageInput').addEventListener('keypress', function(e) {
@@ -401,6 +708,15 @@
                     item.style.display = 'none';
                 }
             });
+        });
+
+        window.addEventListener('click', function(e) {
+            if (e.target.id === 'createGroupModal') {
+                closeCreateGroupModal();
+            }
+            if (e.target.id === 'newChatModal') {
+                closeNewChatModal();
+            }
         });
 
         function logout() {
