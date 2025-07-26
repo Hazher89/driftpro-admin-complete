@@ -1,296 +1,297 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { FirebaseService } from '../../lib/firebase-service';
 
-export default function DashboardPage() {
-  const { selectedCompany } = useAuth();
+interface DashboardStats {
+  totalEmployees: number;
+  activeEmployees: number;
+  departments: number;
+  companyName: string;
+  recentActivity: number;
+}
 
-  // Mock data for demonstration
-  const stats = [
-    {
-      title: 'CPU TRAFFIC',
-      value: '90%',
-      icon: 'fas fa-cogs',
-      color: 'info',
-      change: '+17%',
-      changeType: 'success'
-    },
-    {
-      title: 'LIKES',
-      value: '41,410',
-      icon: 'fab fa-google-plus',
-      color: 'danger',
-      change: '+17%',
-      changeType: 'success'
-    },
-    {
-      title: 'SALES',
-      value: '760',
-      icon: 'fas fa-shopping-cart',
-      color: 'success',
-      change: '+17%',
-      changeType: 'success'
-    },
-    {
-      title: 'NEW MEMBERS',
-      value: '2,000',
-      icon: 'fas fa-users',
-      color: 'warning',
-      change: '+17%',
-      changeType: 'success'
-    }
-  ];
+export default function Dashboard() {
+  const { selectedCompany, currentUser } = useAuth();
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const progressData = [
-    { label: 'Add Products to Cart', value: 160, max: 200, color: 'info' },
-    { label: 'Complete Purchase', value: 310, max: 400, color: 'danger' },
-    { label: 'Visit Premium Page', value: 480, max: 800, color: 'success' },
-    { label: 'Send Inquiries', value: 250, max: 500, color: 'warning' }
-  ];
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      if (!selectedCompany?.id) {
+        setLoading(false);
+        return;
+      }
 
-  const recentActivity = [
-    {
-      user: 'Alexander Pierce',
-      action: 'Is this template really for free? That\'s unbelievable!',
-      time: '23 Jan 2:00 pm',
-      avatar: 'AP'
-    },
-    {
-      user: 'Sarah Bullock',
-      action: 'You better believe it!',
-      time: '23 Jan 2:05 pm',
-      avatar: 'SB'
-    }
-  ];
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const dashboardStats = await FirebaseService.getDashboardStats(selectedCompany.id);
+        setStats(dashboardStats);
+      } catch (err) {
+        console.error('Error loading dashboard data:', err);
+        setError('Kunne ikke laste dashboard-data');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const newMembers = [
-    { name: 'John Doe', avatar: 'JD' },
-    { name: 'Jane Smith', avatar: 'JS' },
-    { name: 'Bob Johnson', avatar: 'BJ' },
-    { name: 'Alice Brown', avatar: 'AB' }
-  ];
+    loadDashboardData();
+  }, [selectedCompany]);
+
+  if (loading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '400px',
+        color: '#3c8dbc'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <i className="fas fa-spinner fa-spin" style={{ fontSize: '48px', marginBottom: '20px' }}></i>
+          <p>Laster dashboard-data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '400px',
+        color: '#dc3545'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <i className="fas fa-exclamation-triangle" style={{ fontSize: '48px', marginBottom: '20px' }}></i>
+          <p>{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      {/* Content Header */}
-      <div className="content-header">
-        <h1 className="content-title">Dashboard</h1>
-        <p className="content-subtitle">Versjon 2.0</p>
+    <div style={{ padding: '20px' }}>
+      {/* Welcome Section */}
+      <div style={{ marginBottom: '30px' }}>
+        <h1 style={{ 
+          fontSize: '28px', 
+          fontWeight: '700', 
+          color: '#333',
+          marginBottom: '10px'
+        }}>
+          Velkommen tilbake, {currentUser?.firstName || 'Admin'}!
+        </h1>
+        <p style={{ 
+          fontSize: '16px', 
+          color: '#6c757d',
+          marginBottom: '20px'
+        }}>
+          Her er oversikten over {selectedCompany?.name || 'din bedrift'}
+        </p>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats Grid */}
       <div className="stats-grid">
-        {stats.map((stat, index) => (
-          <div key={index} className={`stat-card ${stat.color}`}>
-            <div className="stat-icon">
-              <i className={stat.icon}></i>
-            </div>
-            <h3 className="stat-number">{stat.value}</h3>
-            <p className="stat-label">{stat.title}</p>
+        <div className="stat-card success">
+          <div className="stat-icon">
+            <i className="fas fa-users"></i>
           </div>
-        ))}
+          <div className="stat-content">
+            <div className="stat-number">{stats?.totalEmployees || 0}</div>
+            <div className="stat-label">Totalt ansatte</div>
+          </div>
+        </div>
+
+        <div className="stat-card info">
+          <div className="stat-icon">
+            <i className="fas fa-user-check"></i>
+          </div>
+          <div className="stat-content">
+            <div className="stat-number">{stats?.activeEmployees || 0}</div>
+            <div className="stat-label">Aktive ansatte</div>
+          </div>
+        </div>
+
+        <div className="stat-card warning">
+          <div className="stat-icon">
+            <i className="fas fa-building"></i>
+          </div>
+          <div className="stat-content">
+            <div className="stat-number">{stats?.departments || 0}</div>
+            <div className="stat-label">Avdelinger</div>
+          </div>
+        </div>
+
+        <div className="stat-card danger">
+          <div className="stat-icon">
+            <i className="fas fa-chart-line"></i>
+          </div>
+          <div className="stat-content">
+            <div className="stat-number">{stats?.recentActivity || 0}</div>
+            <div className="stat-label">Aktive denne uken</div>
+          </div>
+        </div>
       </div>
 
-      {/* Main Content Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', marginBottom: '20px' }}>
-        {/* Monthly Recap Report */}
-        <div className="chart-container">
-          <h3 className="chart-title">Monthly Recap Report</h3>
-          <p className="chart-subtitle">Sales: 1 Jan, 2024 - 30 Jul, 2024</p>
-          
-          {/* Mock Chart Area */}
+      {/* Charts Section */}
+      <div className="chart-container">
+        <div style={{ 
+          background: 'white', 
+          borderRadius: '8px', 
+          padding: '20px',
+          marginBottom: '20px',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+        }}>
+          <h3 style={{ 
+            fontSize: '18px', 
+            fontWeight: '600', 
+            color: '#333',
+            marginBottom: '15px'
+          }}>
+            Månedlig rapport
+          </h3>
           <div style={{ 
-            height: '300px', 
-            background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
-            borderRadius: '8px',
+            height: '200px', 
+            background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
+            borderRadius: '6px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            marginBottom: '20px'
+            color: '#6c757d'
           }}>
-            <div style={{ textAlign: 'center', color: '#666' }}>
-              <i className="fas fa-chart-area" style={{ fontSize: '48px', marginBottom: '10px' }}></i>
-              <p>Chart Area - Monthly Sales Data</p>
-            </div>
-          </div>
-
-          {/* Summary Stats */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px' }}>
             <div style={{ textAlign: 'center' }}>
-              <h4 style={{ color: 'var(--success-color)', margin: '0', fontSize: '18px' }}>$35,210.43</h4>
-              <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: 'var(--text-secondary)' }}>TOTAL REVENUE</p>
-              <span style={{ color: 'var(--success-color)', fontSize: '12px' }}>+17%</span>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <h4 style={{ color: 'var(--warning-color)', margin: '0', fontSize: '18px' }}>$10,390.90</h4>
-              <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: 'var(--text-secondary)' }}>TOTAL COST</p>
-              <span style={{ color: 'var(--warning-color)', fontSize: '12px' }}>+0%</span>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <h4 style={{ color: 'var(--danger-color)', margin: '0', fontSize: '18px' }}>$24,813.53</h4>
-              <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: 'var(--text-secondary)' }}>TOTAL PROFIT</p>
-              <span style={{ color: 'var(--danger-color)', fontSize: '12px' }}>-20%</span>
+              <i className="fas fa-chart-bar" style={{ fontSize: '48px', marginBottom: '10px' }}></i>
+              <p>Graf kommer snart</p>
             </div>
           </div>
         </div>
 
-        {/* Goal Completion */}
-        <div className="chart-container">
-          <h3 className="chart-title">Goal Completion</h3>
-          
-          <div className="progress-item">
-            {progressData.map((item, index) => (
-              <div key={index} className="progress-item">
-                <div className="progress-label">
-                  <span>{item.label}</span>
-                  <span>{item.value}/{item.max}</span>
-                </div>
-                <div className="progress-bar">
-                  <div 
-                    className={`progress-fill ${item.color}`}
-                    style={{ width: `${(item.value / item.max) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ textAlign: 'center', marginTop: '20px' }}>
-            <h4 style={{ color: 'var(--danger-color)', margin: '0', fontSize: '18px' }}>1200</h4>
-            <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: 'var(--text-secondary)' }}>GOAL COMPLETIONS</p>
-            <span style={{ color: 'var(--danger-color)', fontSize: '12px' }}>-18%</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
-        {/* Direct Chat */}
-        <div className="card">
-          <div className="card-header">
-            <h3 className="card-title">Direct Chat</h3>
-          </div>
-          <div className="card-body">
-            {recentActivity.map((activity, index) => (
-              <div key={index} style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
-                <div className="user-avatar" style={{ width: '40px', height: '40px' }}>
-                  {activity.avatar}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: '600', fontSize: '14px' }}>{activity.user}</div>
-                  <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{activity.action}</div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{activity.time}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Latest Members */}
-        <div className="card">
-          <div className="card-header">
-            <h3 className="card-title">Latest Members</h3>
-            <span className="menu-badge success">8 New Members</span>
-          </div>
-          <div className="card-body">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
-              {newMembers.map((member, index) => (
-                <div key={index} style={{ textAlign: 'center' }}>
-                  <div className="user-avatar" style={{ width: '50px', height: '50px', margin: '0 auto 5px' }}>
-                    {member.avatar}
-                  </div>
-                  <div style={{ fontSize: '12px', fontWeight: '600' }}>{member.name}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Browser Usage */}
-        <div className="card">
-          <div className="card-header">
-            <h3 className="card-title">Browser Usage</h3>
-          </div>
-          <div className="card-body">
+        <div style={{ 
+          background: 'white', 
+          borderRadius: '8px', 
+          padding: '20px',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+        }}>
+          <h3 style={{ 
+            fontSize: '18px', 
+            fontWeight: '600', 
+            color: '#333',
+            marginBottom: '15px'
+          }}>
+            Mål oppfyllelse
+          </h3>
+          <div style={{ marginBottom: '15px' }}>
             <div style={{ 
-              width: '150px', 
-              height: '150px', 
-              borderRadius: '50%',
-              background: 'conic-gradient(#dc3545 0deg 120deg, #17a2b8 120deg 240deg, #28a745 240deg 360deg)',
-              margin: '0 auto 20px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              marginBottom: '5px',
+              fontSize: '14px'
+            }}>
+              <span>Ansatte registrering</span>
+              <span>85%</span>
+            </div>
+            <div style={{ 
+              width: '100%', 
+              height: '8px', 
+              backgroundColor: '#e9ecef', 
+              borderRadius: '4px',
+              overflow: 'hidden'
             }}>
               <div style={{ 
-                width: '100px', 
-                height: '100px', 
-                borderRadius: '50%',
-                background: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '12px',
-                fontWeight: '600'
-              }}>
-                Browser
-              </div>
+                width: '85%', 
+                height: '100%', 
+                backgroundColor: '#28a745',
+                borderRadius: '4px'
+              }}></div>
             </div>
-            
-            <div style={{ fontSize: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                <span>Chrome</span>
-                <span style={{ color: 'var(--danger-color)' }}>33%</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                <span>IE</span>
-                <span style={{ color: 'var(--info-color)' }}>33%</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                <span>Firefox</span>
-                <span style={{ color: 'var(--success-color)' }}>34%</span>
-              </div>
+          </div>
+          <div style={{ marginBottom: '15px' }}>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              marginBottom: '5px',
+              fontSize: '14px'
+            }}>
+              <span>Avviksrapportering</span>
+              <span>92%</span>
+            </div>
+            <div style={{ 
+              width: '100%', 
+              height: '8px', 
+              backgroundColor: '#e9ecef', 
+              borderRadius: '4px',
+              overflow: 'hidden'
+            }}>
+              <div style={{ 
+                width: '92%', 
+                height: '100%', 
+                backgroundColor: '#17a2b8',
+                borderRadius: '4px'
+              }}></div>
+            </div>
+          </div>
+          <div>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              marginBottom: '5px',
+              fontSize: '14px'
+            }}>
+              <span>Dokumentopplasting</span>
+              <span>78%</span>
+            </div>
+            <div style={{ 
+              width: '100%', 
+              height: '8px', 
+              backgroundColor: '#e9ecef', 
+              borderRadius: '4px',
+              overflow: 'hidden'
+            }}>
+              <div style={{ 
+                width: '78%', 
+                height: '100%', 
+                backgroundColor: '#ffc107',
+                borderRadius: '4px'
+              }}></div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Additional Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginTop: '20px' }}>
-        <div className="stat-card warning">
-          <div className="stat-icon">
-            <i className="fas fa-tags"></i>
+      {/* Recent Activity */}
+      <div style={{ 
+        background: 'white', 
+        borderRadius: '8px', 
+        padding: '20px',
+        marginTop: '20px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+      }}>
+        <h3 style={{ 
+          fontSize: '18px', 
+          fontWeight: '600', 
+          color: '#333',
+          marginBottom: '15px'
+        }}>
+          Siste aktivitet
+        </h3>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          height: '100px',
+          color: '#6c757d'
+        }}>
+          <div style={{ textAlign: 'center' }}>
+            <i className="fas fa-clock" style={{ fontSize: '32px', marginBottom: '10px' }}></i>
+            <p>Ingen aktivitet å vise</p>
           </div>
-          <h3 className="stat-number">5,200</h3>
-          <p className="stat-label">INVENTORY</p>
-          <small style={{ color: 'var(--warning-color)' }}>50% Increase in 30 Days</small>
-        </div>
-        
-        <div className="stat-card success">
-          <div className="stat-icon">
-            <i className="fas fa-heart"></i>
-          </div>
-          <h3 className="stat-number">92,050</h3>
-          <p className="stat-label">MENTIONS</p>
-          <small style={{ color: 'var(--success-color)' }}>20% Increase in 30 Days</small>
-        </div>
-        
-        <div className="stat-card danger">
-          <div className="stat-icon">
-            <i className="fas fa-cloud-download-alt"></i>
-          </div>
-          <h3 className="stat-number">114,381</h3>
-          <p className="stat-label">DOWNLOADS</p>
-          <small style={{ color: 'var(--danger-color)' }}>70% Increase in 30 Days</small>
-        </div>
-        
-        <div className="stat-card info">
-          <div className="stat-icon">
-            <i className="fas fa-comments"></i>
-          </div>
-          <h3 className="stat-number">163,921</h3>
-          <p className="stat-label">DIRECT MESSAGES</p>
-          <small style={{ color: 'var(--info-color)' }}>40% Increase in 30 Days</small>
         </div>
       </div>
     </div>

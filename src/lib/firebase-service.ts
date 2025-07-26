@@ -1,0 +1,316 @@
+import { 
+  collection, 
+  query, 
+  where, 
+  getDocs, 
+  doc, 
+  getDoc, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc,
+  orderBy,
+  limit,
+  startAfter,
+  QueryDocumentSnapshot,
+  DocumentData
+} from 'firebase/firestore';
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  signOut,
+  User as FirebaseUser
+} from 'firebase/auth';
+import { db, auth } from './firebase';
+
+export interface Company {
+  id: string;
+  name: string;
+  industry: string;
+  employees: number;
+  address?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  isActive: boolean;
+  createdAt: Date;
+  settings?: {
+    enableDeviationReporting?: boolean;
+    enableRiskAnalysis?: boolean;
+    enableDocumentArchive?: boolean;
+    enableInternalControl?: boolean;
+    enableChat?: boolean;
+    enableBirthdayCalendar?: boolean;
+    maxFileSizeMB?: number;
+    allowedFileTypes?: string[];
+  };
+}
+
+export interface User {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: 'admin' | 'manager' | 'employee';
+  companyId: string;
+  department?: string;
+  phoneNumber?: string;
+  profileImageURL?: string;
+  isActive: boolean;
+  createdAt: Date;
+  lastLoginAt?: Date;
+  birthday?: Date;
+  employeeId?: string;
+}
+
+export class FirebaseService {
+  // Company methods
+  static async searchCompanies(searchTerm: string): Promise<Company[]> {
+    if (!db) {
+      console.warn('Firebase not initialized');
+      return [];
+    }
+
+    try {
+      const companiesRef = collection(db, 'companies');
+      const q = query(
+        companiesRef,
+        where('isActive', '==', true),
+        orderBy('name')
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const companies: Company[] = [];
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            data.industry.toLowerCase().includes(searchTerm.toLowerCase())) {
+          companies.push({
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt?.toDate() || new Date()
+          } as Company);
+        }
+      });
+      
+      return companies;
+    } catch (error) {
+      console.error('Error searching companies:', error);
+      return [];
+    }
+  }
+
+  static async getCompanyById(companyId: string): Promise<Company | null> {
+    if (!db) {
+      console.warn('Firebase not initialized');
+      return null;
+    }
+
+    try {
+      const companyDoc = await getDoc(doc(db, 'companies', companyId));
+      if (companyDoc.exists()) {
+        const data = companyDoc.data();
+        return {
+          id: companyDoc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate() || new Date()
+        } as Company;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting company:', error);
+      return null;
+    }
+  }
+
+  static async getCompaniesByIndustry(industry: string): Promise<Company[]> {
+    if (!db) {
+      console.warn('Firebase not initialized');
+      return [];
+    }
+
+    try {
+      const companiesRef = collection(db, 'companies');
+      const q = query(
+        companiesRef,
+        where('industry', '==', industry),
+        where('isActive', '==', true),
+        orderBy('name')
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const companies: Company[] = [];
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        companies.push({
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate() || new Date()
+        } as Company);
+      });
+      
+      return companies;
+    } catch (error) {
+      console.error('Error getting companies by industry:', error);
+      return [];
+    }
+  }
+
+  // User methods
+  static async getUserById(userId: string): Promise<User | null> {
+    if (!db) {
+      console.warn('Firebase not initialized');
+      return null;
+    }
+
+    try {
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        return {
+          id: userDoc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate() || new Date(),
+          lastLoginAt: data.lastLoginAt?.toDate(),
+          birthday: data.birthday?.toDate()
+        } as User;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting user:', error);
+      return null;
+    }
+  }
+
+  static async getUsersByCompany(companyId: string): Promise<User[]> {
+    if (!db) {
+      console.warn('Firebase not initialized');
+      return [];
+    }
+
+    try {
+      const usersRef = collection(db, 'users');
+      const q = query(
+        usersRef,
+        where('companyId', '==', companyId),
+        where('isActive', '==', true),
+        orderBy('firstName')
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const users: User[] = [];
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        users.push({
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate() || new Date(),
+          lastLoginAt: data.lastLoginAt?.toDate(),
+          birthday: data.birthday?.toDate()
+        } as User);
+      });
+      
+      return users;
+    } catch (error) {
+      console.error('Error getting users by company:', error);
+      return [];
+    }
+  }
+
+  // Authentication methods
+  static async login(email: string, password: string): Promise<FirebaseUser | null> {
+    if (!auth) {
+      throw new Error('Firebase not initialized');
+    }
+
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      return userCredential.user;
+    } catch (error) {
+      console.error('Error logging in:', error);
+      throw error;
+    }
+  }
+
+  static async logout(): Promise<void> {
+    if (!auth) {
+      throw new Error('Firebase not initialized');
+    }
+
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error('Error logging out:', error);
+      throw error;
+    }
+  }
+
+  static async createUser(email: string, password: string, userData: Partial<User>): Promise<User | null> {
+    if (!auth || !db) {
+      throw new Error('Firebase not initialized');
+    }
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      
+      const newUser: Omit<User, 'id'> = {
+        email: user.email || email,
+        firstName: userData.firstName || '',
+        lastName: userData.lastName || '',
+        role: userData.role || 'employee',
+        companyId: userData.companyId || '',
+        department: userData.department,
+        phoneNumber: userData.phoneNumber,
+        profileImageURL: userData.profileImageURL,
+        isActive: true,
+        createdAt: new Date(),
+        lastLoginAt: new Date(),
+        birthday: userData.birthday,
+        employeeId: userData.employeeId
+      };
+      
+      const userDoc = await addDoc(collection(db, 'users'), newUser);
+      return {
+        id: userDoc.id,
+        ...newUser
+      };
+    } catch (error) {
+      console.error('Error creating user:', error);
+      throw error;
+    }
+  }
+
+  // Dashboard statistics
+  static async getDashboardStats(companyId: string) {
+    try {
+      const users = await this.getUsersByCompany(companyId);
+      const company = await this.getCompanyById(companyId);
+      
+      return {
+        totalEmployees: users.length,
+        activeEmployees: users.filter(u => u.isActive).length,
+        departments: [...new Set(users.map(u => u.department).filter(Boolean))].length,
+        companyName: company?.name || 'Unknown Company',
+        recentActivity: users.filter(u => {
+          const lastLogin = u.lastLoginAt;
+          if (!lastLogin) return false;
+          const oneWeekAgo = new Date();
+          oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+          return lastLogin > oneWeekAgo;
+        }).length
+      };
+    } catch (error) {
+      console.error('Error getting dashboard stats:', error);
+      return {
+        totalEmployees: 0,
+        activeEmployees: 0,
+        departments: 0,
+        companyName: 'Unknown Company',
+        recentActivity: 0
+      };
+    }
+  }
+} 

@@ -1,48 +1,9 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-
-interface User {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: 'admin' | 'manager' | 'employee';
-  companyId: string;
-  department?: string;
-  phoneNumber?: string;
-  profileImageURL?: string;
-  isActive: boolean;
-  createdAt: Date;
-  lastLoginAt?: Date;
-  birthday?: Date;
-  employeeId?: string;
-}
-
-interface CompanySettings {
-  enableDeviationReporting?: boolean;
-  enableRiskAnalysis?: boolean;
-  enableDocumentArchive?: boolean;
-  enableInternalControl?: boolean;
-  enableChat?: boolean;
-  enableBirthdayCalendar?: boolean;
-  maxFileSizeMB?: number;
-  allowedFileTypes?: string[];
-}
-
-interface Company {
-  id: string;
-  name: string;
-  industry: string;
-  employees: number;
-  address?: string;
-  phone?: string;
-  email?: string;
-  website?: string;
-  isActive: boolean;
-  createdAt: Date;
-  settings?: CompanySettings;
-}
+import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { auth } from '../lib/firebase';
+import { FirebaseService, User, Company } from '../lib/firebase-service';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -59,75 +20,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [adminUser, setAdminUser] = useState<User | null>(null);
   const [selectedCompany, setSelectedCompanyState] = useState<Company | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Mock admin user data
-  const mockAdminUser: User = {
-    id: '1',
-    email: 'admin@driftpro.no',
-    firstName: 'Alexander',
-    lastName: 'Pierce',
-    role: 'admin',
-    companyId: '1',
-    department: 'Administrasjon',
-    phoneNumber: '+47 123 45 678',
-    isActive: true,
-    createdAt: new Date(),
-    lastLoginAt: new Date(),
-    employeeId: 'EMP001'
-  };
-
-  const login = async (email: string, password: string) => {
-    // Mock login - replace with real Firebase auth
-    if (email === 'admin@driftpro.no' && password === 'admin123') {
-      setCurrentUser(mockAdminUser);
-      setAdminUser(mockAdminUser);
-      
-      // Set default company if none selected
-      if (!selectedCompany) {
-        const defaultCompany: Company = {
-          id: '1',
-          name: 'DriftPro AS',
-          industry: 'Teknologi',
-          employees: 150,
-          address: 'Oslo, Norway',
-          phone: '+47 22 12 34 56',
-          email: 'info@driftpro.no',
-          website: 'www.driftpro.no',
-          isActive: true,
-          createdAt: new Date()
-        };
-        setSelectedCompanyState(defaultCompany);
-      }
-    } else {
-      throw new Error('Invalid credentials');
+  // Listen for Firebase auth state changes
+  useEffect(() => {
+    if (!auth) {
+      setLoading(false);
+      return;
     }
-  };
 
-  const logout = () => {
-    setCurrentUser(null);
-    setAdminUser(null);
-    setSelectedCompanyState(null);
-  };
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+      if (firebaseUser) {
+        try {
+          // Get user data from Firestore
+          const users = await FirebaseService.getUsersByCompany(selectedCompany?.id || '');
+          const user = users.find(u => u.email === firebaseUser.email);
+          
+          if (user) {
+            setCurrentUser(user);
+            setAdminUser(user);
+          } else {
+            // If user not found in current company, try to find them in any company
+            // This is a fallback for when company context is not set
+            console.log('User not found in current company, searching all companies...');
+          }
+        } catch (error) {
+          console.error('Error getting user data:', error);
+        }
+      } else {
+        setCurrentUser(null);
+        setAdminUser(null);
+      }
+      setLoading(false);
+    });
 
-  const setSelectedCompany = (company: Company) => {
-    setSelectedCompanyState(company);
-  };
+    return () => unsubscribe();
+  }, [selectedCompany]);
 
   // Check for existing session on mount
   useEffect(() => {
-    // Check localStorage for existing session
-    const savedUser = localStorage.getItem('driftpro_user');
+    // Check localStorage for existing company selection
     const savedCompany = localStorage.getItem('driftpro_company');
-    
-    if (savedUser) {
-      try {
-        const user = JSON.parse(savedUser);
-        setCurrentUser(user);
-        setAdminUser(user);
-      } catch (error) {
-        console.error('Error parsing saved user:', error);
-      }
-    }
     
     if (savedCompany) {
       try {
@@ -139,15 +72,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Save to localStorage when state changes
-  useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem('driftpro_user', JSON.stringify(currentUser));
-    } else {
-      localStorage.removeItem('driftpro_user');
+  const login = async (email: string, password: string) => {
+    try {
+      await FirebaseService.login(email, password);
+      // The auth state listener will handle setting the user
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
     }
-  }, [currentUser]);
+  };
 
+  const logout = async () => {
+    try {
+      await FirebaseService.logout();
+      setCurrentUser(null);
+      setAdminUser(null);
+      setSelectedCompanyState(null);
+      localStorage.removeItem('driftpro_company');
+    } catch (error) {
+      console.error('Logout error:', error);
+      throw error;
+    }
+  };
+
+  const setSelectedCompany = (company: Company) => {
+    setSelectedCompanyState(company);
+    localStorage.setItem('driftpro_company', JSON.stringify(company));
+  };
+
+  // Save to localStorage when state changes
   useEffect(() => {
     if (selectedCompany) {
       localStorage.setItem('driftpro_company', JSON.stringify(selectedCompany));
@@ -164,6 +117,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout,
     setSelectedCompany
   };
+
+  if (loading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        color: '#3c8dbc'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <i className="fas fa-spinner fa-spin" style={{ fontSize: '48px', marginBottom: '20px' }}></i>
+          <p>Laster...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <AuthContext.Provider value={value}>
