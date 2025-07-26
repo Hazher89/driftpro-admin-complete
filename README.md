@@ -153,3 +153,4 @@ Hvis du har problemer:
 2. Verifiser alle konfigurasjoner
 3. Test med en enkel e-post først
 4. Sjekk at alle dependencies er installert
+# Netlify Cache Refresh - Sat Jul 26 18:58:40 CEST 2025
