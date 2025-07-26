@@ -1,25 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { FirebaseService } from '../../lib/firebase-service';
-
-interface User {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: 'admin' | 'manager' | 'employee';
-  companyId: string;
-  department?: string;
-  phoneNumber?: string;
-  profileImageURL?: string;
-  isActive: boolean;
-  createdAt: Date;
-  lastLoginAt?: Date;
-  birthday?: Date;
-  employeeId?: string;
-}
+import { FirebaseService, User } from '../../lib/firebase-service';
 
 export default function UsersPage() {
   const { selectedCompany } = useAuth();
@@ -40,53 +23,55 @@ export default function UsersPage() {
   const [selected, setSelected] = useState<User | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (selectedCompany) {
-      fetchUsers();
+  const fetchUsers = useCallback(async () => {
+    if (!selectedCompany) return;
+    
+    setLoading(true);
+    setError(null);
+    try {
+      const fetchedUsers = await FirebaseService.getUsersByCompany(selectedCompany.id);
+      setUsers(fetchedUsers);
+    } catch (err) {
+      console.error('Error fetching users:', err);
+      setError('Kunne ikke hente brukere. Prøv igjen senere.');
+    } finally {
+      setLoading(false);
     }
   }, [selectedCompany]);
 
-  async function fetchUsers() {
-    setLoading(true);
-    try {
-      if (selectedCompany) {
-        const users = await FirebaseService.getUsersByCompany(selectedCompany.id);
-        setUsers(users);
-      }
-    } catch (error) {
-      console.error('Error fetching users:', error);
-    }
-    setLoading(false);
-  }
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   async function handleCreate() {
-    if (!newUser.email || !newUser.firstName || !newUser.lastName || !newUser.role) {
-      alert('Vennligst fyll ut alle påkrevde felter');
+    if (!selectedCompany || !newUser.email || !newUser.firstName || !newUser.lastName || !newUser.role) {
+      setError('Vennligst fyll ut alle påkrevde felter');
       return;
     }
 
+    setCreating(true);
+    setError(null);
     try {
-      const userData: Partial<User> = {
+      const userData: Omit<User, 'id'> = {
         email: newUser.email,
         firstName: newUser.firstName,
         lastName: newUser.lastName,
         role: newUser.role,
-        companyId: selectedCompany?.id || '',
+        companyId: selectedCompany.id,
         department: newUser.department || undefined,
         phoneNumber: newUser.phoneNumber || undefined,
         employeeId: newUser.employeeId || undefined,
-        isActive: true
+        isActive: true,
+        createdAt: new Date(),
+        lastLoginAt: new Date()
       };
 
-      // Mock creation - replace with real Firebase call
-      const newUserWithId: User = {
-        ...userData,
-        id: Date.now().toString(),
-        createdAt: new Date()
-      } as User;
-
-      setUsers([...users, newUserWithId]);
+      await FirebaseService.createUser(userData);
+      
       setShowCreate(false);
       setNewUser({
         email: '',
@@ -97,40 +82,74 @@ export default function UsersPage() {
         phoneNumber: '',
         employeeId: ''
       });
+      
+      // Refresh users list
+      await fetchUsers();
+      
+      // Show success message
       alert('Bruker opprettet');
-    } catch (error) {
-      alert('Feil ved opprettelse av bruker');
+    } catch (err) {
+      console.error('Error creating user:', err);
+      setError('Feil ved opprettelse av bruker. Prøv igjen.');
+    } finally {
+      setCreating(false);
     }
   }
 
   async function handleEdit() {
     if (!selected) return;
     
+    setUpdating(true);
+    setError(null);
     try {
-      // Mock update - replace with real Firebase call
-      setUsers(users.map(user => 
-        user.id === selected.id ? selected : user
-      ));
+      await FirebaseService.updateUser(selected.id, {
+        firstName: selected.firstName,
+        lastName: selected.lastName,
+        email: selected.email,
+        role: selected.role,
+        department: selected.department,
+        phoneNumber: selected.phoneNumber,
+        employeeId: selected.employeeId,
+        isActive: selected.isActive
+      });
+      
       setEditMode(false);
+      
+      // Refresh users list
+      await fetchUsers();
+      
       alert('Bruker oppdatert');
-    } catch (error) {
-      alert('Feil ved oppdatering av bruker');
+    } catch (err) {
+      console.error('Error updating user:', err);
+      setError('Feil ved oppdatering av bruker. Prøv igjen.');
+    } finally {
+      setUpdating(false);
     }
   }
 
   async function handleDelete() {
     if (!selected) return;
     
-    setDeleting(true);
-    try {
-      // Mock deletion - replace with real Firebase call
-      setUsers(users.filter(user => user.id !== selected.id));
-      setSelected(null);
-      alert('Bruker slettet');
-    } catch (error) {
-      alert('Feil ved sletting av bruker');
+    if (!confirm(`Er du sikker på at du vil slette brukeren "${selected.firstName} ${selected.lastName}"?`)) {
+      return;
     }
-    setDeleting(false);
+    
+    setDeleting(true);
+    setError(null);
+    try {
+      await FirebaseService.deleteUser(selected.id);
+      setSelected(null);
+      
+      // Refresh users list
+      await fetchUsers();
+      
+      alert('Bruker slettet');
+    } catch (err) {
+      console.error('Error deleting user:', err);
+      setError('Feil ved sletting av bruker. Prøv igjen.');
+    } finally {
+      setDeleting(false);
+    }
   }
 
   function exportToCSV() {
@@ -164,7 +183,7 @@ export default function UsersPage() {
       }}>
         <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#3c8dbc' }}>
           <i className="fas fa-users" style={{ marginRight: '10px' }}></i>
-          Brukere
+          Brukere ({users.length})
         </h1>
         <div style={{ display: 'flex', gap: '10px' }}>
           <button
@@ -201,6 +220,20 @@ export default function UsersPage() {
           </button>
         </div>
       </div>
+
+      {error && (
+        <div style={{
+          backgroundColor: '#f8d7da',
+          color: '#721c24',
+          padding: '12px',
+          borderRadius: '4px',
+          marginBottom: '20px',
+          border: '1px solid #f5c6cb'
+        }}>
+          <i className="fas fa-exclamation-triangle" style={{ marginRight: '8px' }}></i>
+          {error}
+        </div>
+      )}
 
       <div style={{ 
         display: 'flex', 
@@ -250,19 +283,21 @@ export default function UsersPage() {
               <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Rolle</th>
               <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Avdeling</th>
               <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Status</th>
+              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Sist aktiv</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={5} style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
+                <td colSpan={6} style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
+                  <i className="fas fa-spinner fa-spin" style={{ marginRight: '8px' }}></i>
                   Laster brukere...
                 </td>
               </tr>
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={5} style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
-                  Ingen brukere funnet
+                <td colSpan={6} style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
+                  {search || roleFilter ? 'Ingen brukere funnet med valgte filtre' : 'Ingen brukere funnet'}
                 </td>
               </tr>
             ) : filtered.map((user) => (
@@ -315,6 +350,9 @@ export default function UsersPage() {
                   }}>
                     {user.isActive ? 'Aktiv' : 'Inaktiv'}
                   </span>
+                </td>
+                <td style={{ padding: '12px', fontSize: '12px', color: '#666' }}>
+                  {user.lastLoginAt ? user.lastLoginAt.toLocaleDateString('nb-NO') : 'Aldri'}
                 </td>
               </tr>
             ))}
@@ -476,29 +514,40 @@ export default function UsersPage() {
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
               <button
                 onClick={() => setShowCreate(false)}
+                disabled={creating}
                 style={{
                   padding: '10px 20px',
                   border: '1px solid #ddd',
                   backgroundColor: 'white',
                   borderRadius: '4px',
-                  cursor: 'pointer'
+                  cursor: creating ? 'not-allowed' : 'pointer',
+                  opacity: creating ? 0.6 : 1
                 }}
               >
                 Avbryt
               </button>
               <button
                 onClick={handleCreate}
+                disabled={creating}
                 style={{
                   padding: '10px 20px',
                   backgroundColor: '#3c8dbc',
                   color: 'white',
                   border: 'none',
                   borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontWeight: 'bold'
+                  cursor: creating ? 'not-allowed' : 'pointer',
+                  fontWeight: 'bold',
+                  opacity: creating ? 0.6 : 1
                 }}
               >
-                Opprett
+                {creating ? (
+                  <>
+                    <i className="fas fa-spinner fa-spin" style={{ marginRight: '8px' }}></i>
+                    Oppretter...
+                  </>
+                ) : (
+                  'Opprett'
+                )}
               </button>
             </div>
           </div>
@@ -649,7 +698,7 @@ export default function UsersPage() {
               />
             </div>
 
-            <div style={{ marginBottom: '20px' }}>
+            <div style={{ marginBottom: '15px' }}>
               <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Ansatt ID</label>
               <input
                 type="text"
@@ -666,34 +715,64 @@ export default function UsersPage() {
               />
             </div>
 
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Status</label>
+              <select
+                value={selected.isActive ? 'active' : 'inactive'}
+                disabled={!editMode}
+                onChange={(e) => setSelected({ ...selected, isActive: e.target.value === 'active' })}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  backgroundColor: editMode ? 'white' : '#f8f9fa'
+                }}
+              >
+                <option value="active">Aktiv</option>
+                <option value="inactive">Inaktiv</option>
+              </select>
+            </div>
+
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
               {editMode ? (
                 <>
                   <button
                     onClick={() => setEditMode(false)}
+                    disabled={updating}
                     style={{
                       padding: '10px 20px',
                       border: '1px solid #ddd',
                       backgroundColor: 'white',
                       borderRadius: '4px',
-                      cursor: 'pointer'
+                      cursor: updating ? 'not-allowed' : 'pointer',
+                      opacity: updating ? 0.6 : 1
                     }}
                   >
                     Avbryt
                   </button>
                   <button
                     onClick={handleEdit}
+                    disabled={updating}
                     style={{
                       padding: '10px 20px',
                       backgroundColor: '#3c8dbc',
                       color: 'white',
                       border: 'none',
                       borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontWeight: 'bold'
+                      cursor: updating ? 'not-allowed' : 'pointer',
+                      fontWeight: 'bold',
+                      opacity: updating ? 0.6 : 1
                     }}
                   >
-                    Lagre
+                    {updating ? (
+                      <>
+                        <i className="fas fa-spinner fa-spin" style={{ marginRight: '8px' }}></i>
+                        Lagrer...
+                      </>
+                    ) : (
+                      'Lagre'
+                    )}
                   </button>
                 </>
               ) : (
@@ -726,7 +805,14 @@ export default function UsersPage() {
                   opacity: deleting ? 0.6 : 1
                 }}
               >
-                {deleting ? 'Sletter...' : 'Slett'}
+                {deleting ? (
+                  <>
+                    <i className="fas fa-spinner fa-spin" style={{ marginRight: '8px' }}></i>
+                    Sletter...
+                  </>
+                ) : (
+                  'Slett'
+                )}
               </button>
             </div>
           </div>

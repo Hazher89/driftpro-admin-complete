@@ -1,174 +1,177 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { FirebaseService } from '../../lib/firebase-service';
-
-interface Department {
-  id: string;
-  name: string;
-  description: string;
-  manager: string;
-  employeeCount: number;
-  isActive: boolean;
-  createdAt: Date;
-  companyId: string;
-}
+import { FirebaseService, Department, User } from '../../lib/firebase-service';
 
 export default function DepartmentsPage() {
   const { selectedCompany } = useAuth();
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [newDepartment, setNewDepartment] = useState({
     name: '',
     description: '',
-    manager: ''
+    manager: '',
+    managerId: '',
+    color: '#3c8dbc',
+    budget: 0
   });
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Department | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (selectedCompany) {
-      fetchDepartments();
+  const fetchData = useCallback(async () => {
+    if (!selectedCompany) return;
+    
+    setLoading(true);
+    setError(null);
+    try {
+      const [fetchedDepartments, fetchedUsers] = await Promise.all([
+        FirebaseService.getDepartmentsByCompany(selectedCompany.id),
+        FirebaseService.getUsersByCompany(selectedCompany.id)
+      ]);
+      setDepartments(fetchedDepartments);
+      setUsers(fetchedUsers);
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      setError('Kunne ikke hente data. Prøv igjen senere.');
+    } finally {
+      setLoading(false);
     }
   }, [selectedCompany]);
 
-  async function fetchDepartments() {
-    setLoading(true);
-    try {
-      // Mock data for now - replace with real Firebase call
-      const mockDepartments: Department[] = [
-        {
-          id: '1',
-          name: 'IT',
-          description: 'Informasjonsteknologi og systemadministrasjon',
-          manager: 'Admin DriftPro',
-          employeeCount: 8,
-          isActive: true,
-          createdAt: new Date('2024-01-01T00:00:00Z'),
-          companyId: selectedCompany?.id || ''
-        },
-        {
-          id: '2',
-          name: 'Vedlikehold',
-          description: 'Teknisk vedlikehold og reparasjoner',
-          manager: 'Manager DriftPro',
-          employeeCount: 12,
-          isActive: true,
-          createdAt: new Date('2024-01-01T00:00:00Z'),
-          companyId: selectedCompany?.id || ''
-        },
-        {
-          id: '3',
-          name: 'Produksjon',
-          description: 'Produksjon og kvalitetskontroll',
-          manager: 'Employee DriftPro',
-          employeeCount: 25,
-          isActive: true,
-          createdAt: new Date('2024-01-01T00:00:00Z'),
-          companyId: selectedCompany?.id || ''
-        },
-        {
-          id: '4',
-          name: 'Kvalitet',
-          description: 'Kvalitetssikring og testing',
-          manager: 'Manager DriftPro',
-          employeeCount: 6,
-          isActive: true,
-          createdAt: new Date('2024-01-01T00:00:00Z'),
-          companyId: selectedCompany?.id || ''
-        },
-        {
-          id: '5',
-          name: 'Logistikk',
-          description: 'Lager og transport',
-          manager: 'Employee DriftPro',
-          employeeCount: 10,
-          isActive: false,
-          createdAt: new Date('2024-01-01T00:00:00Z'),
-          companyId: selectedCompany?.id || ''
-        }
-      ];
-      setDepartments(mockDepartments);
-    } catch (error) {
-      console.error('Error fetching departments:', error);
-    }
-    setLoading(false);
-  }
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   async function handleCreate() {
-    if (!newDepartment.name || !newDepartment.description || !newDepartment.manager) {
-      alert('Vennligst fyll ut alle påkrevde felter');
+    if (!selectedCompany || !newDepartment.name || !newDepartment.description || !newDepartment.managerId) {
+      setError('Vennligst fyll ut alle påkrevde felter');
       return;
     }
 
+    setCreating(true);
+    setError(null);
     try {
-      const departmentData: Omit<Department, 'id' | 'createdAt'> = {
+      const manager = users.find(u => u.id === newDepartment.managerId);
+      if (!manager) {
+        setError('Valgt manager finnes ikke');
+        return;
+      }
+
+      const departmentData: Omit<Department, 'id'> = {
         name: newDepartment.name,
         description: newDepartment.description,
-        manager: newDepartment.manager,
+        manager: `${manager.firstName} ${manager.lastName}`,
+        managerId: newDepartment.managerId,
         employeeCount: 0,
         isActive: true,
-        companyId: selectedCompany?.id || ''
+        createdAt: new Date(),
+        companyId: selectedCompany.id,
+        color: newDepartment.color,
+        budget: newDepartment.budget
       };
 
-      // Mock creation - replace with real Firebase call
-      const newDepartmentWithId: Department = {
-        ...departmentData,
-        id: Date.now().toString(),
-        createdAt: new Date()
-      };
-
-      setDepartments([...departments, newDepartmentWithId]);
+      await FirebaseService.createDepartment(departmentData);
+      
       setShowCreate(false);
       setNewDepartment({
         name: '',
         description: '',
-        manager: ''
+        manager: '',
+        managerId: '',
+        color: '#3c8dbc',
+        budget: 0
       });
+      
+      // Refresh data
+      await fetchData();
+      
       alert('Avdeling opprettet');
-    } catch (error) {
-      alert('Feil ved opprettelse av avdeling');
+    } catch (err) {
+      console.error('Error creating department:', err);
+      setError('Feil ved opprettelse av avdeling. Prøv igjen.');
+    } finally {
+      setCreating(false);
     }
   }
 
   async function handleEdit() {
     if (!selected) return;
     
+    setUpdating(true);
+    setError(null);
     try {
-      // Mock update - replace with real Firebase call
-      setDepartments(departments.map(dept => 
-        dept.id === selected.id ? selected : dept
-      ));
+      const manager = users.find(u => u.id === selected.managerId);
+      if (!manager) {
+        setError('Valgt manager finnes ikke');
+        return;
+      }
+
+      await FirebaseService.updateDepartment(selected.id, {
+        name: selected.name,
+        description: selected.description,
+        manager: `${manager.firstName} ${manager.lastName}`,
+        managerId: selected.managerId,
+        employeeCount: selected.employeeCount,
+        isActive: selected.isActive,
+        color: selected.color,
+        budget: selected.budget
+      });
+      
       setEditMode(false);
+      
+      // Refresh data
+      await fetchData();
+      
       alert('Avdeling oppdatert');
-    } catch (error) {
-      alert('Feil ved oppdatering av avdeling');
+    } catch (err) {
+      console.error('Error updating department:', err);
+      setError('Feil ved oppdatering av avdeling. Prøv igjen.');
+    } finally {
+      setUpdating(false);
     }
   }
 
   async function handleDelete() {
     if (!selected) return;
     
-    setDeleting(true);
-    try {
-      // Mock deletion - replace with real Firebase call
-      setDepartments(departments.filter(dept => dept.id !== selected.id));
-      setSelected(null);
-      alert('Avdeling slettet');
-    } catch (error) {
-      alert('Feil ved sletting av avdeling');
+    if (!confirm(`Er du sikker på at du vil slette avdelingen "${selected.name}"?`)) {
+      return;
     }
-    setDeleting(false);
+    
+    setDeleting(true);
+    setError(null);
+    try {
+      await FirebaseService.deleteDepartment(selected.id);
+      setSelected(null);
+      
+      // Refresh data
+      await fetchData();
+      
+      alert('Avdeling slettet');
+    } catch (err) {
+      console.error('Error deleting department:', err);
+      setError('Feil ved sletting av avdeling. Prøv igjen.');
+    } finally {
+      setDeleting(false);
+    }
   }
 
   const filteredDepartments = departments.filter(department =>
     department.name.toLowerCase().includes(search.toLowerCase()) ||
     department.description.toLowerCase().includes(search.toLowerCase()) ||
     department.manager.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const managerOptions = users.filter(user => 
+    user.role === 'manager' || user.role === 'admin'
   );
 
   return (
@@ -182,7 +185,7 @@ export default function DepartmentsPage() {
         <div>
           <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#3c8dbc' }}>
             <i className="fas fa-building" style={{ marginRight: '10px' }}></i>
-            Avdelinger
+            Avdelinger ({departments.length})
           </h1>
           <p style={{ color: '#666', marginTop: '5px' }}>Administrer avdelinger og organisasjonsstruktur</p>
         </div>
@@ -202,6 +205,20 @@ export default function DepartmentsPage() {
           Ny avdeling
         </button>
       </div>
+
+      {error && (
+        <div style={{
+          backgroundColor: '#f8d7da',
+          color: '#721c24',
+          padding: '12px',
+          borderRadius: '4px',
+          marginBottom: '20px',
+          border: '1px solid #f5c6cb'
+        }}>
+          <i className="fas fa-exclamation-triangle" style={{ marginRight: '8px' }}></i>
+          {error}
+        </div>
+      )}
 
       <div style={{ 
         display: 'flex', 
@@ -231,6 +248,7 @@ export default function DepartmentsPage() {
             padding: '40px', 
             color: '#666' 
           }}>
+            <i className="fas fa-spinner fa-spin" style={{ marginRight: '8px' }}></i>
             Laster avdelinger...
           </div>
         ) : filteredDepartments.length === 0 ? (
@@ -240,7 +258,7 @@ export default function DepartmentsPage() {
             padding: '40px', 
             color: '#666' 
           }}>
-            Ingen avdelinger funnet
+            {search ? 'Ingen avdelinger funnet med søkeordet' : 'Ingen avdelinger funnet'}
           </div>
         ) : filteredDepartments.map((department) => (
           <div
@@ -293,6 +311,13 @@ export default function DepartmentsPage() {
                   <i className="fas fa-users" style={{ fontSize: '12px', color: '#666', marginRight: '5px' }}></i>
                   <span style={{ fontSize: '14px', fontWeight: 'bold' }}>{department.employeeCount}</span>
                 </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontSize: '14px', color: '#666' }}>Budsjett:</span>
+                <span style={{ fontSize: '14px', fontWeight: 'bold' }}>
+                  {department.budget ? `kr ${department.budget.toLocaleString('nb-NO')}` : 'Ikke satt'}
+                </span>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -352,7 +377,8 @@ export default function DepartmentsPage() {
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
                   onClick={(e) => {
                     e.stopPropagation();
-                    alert('Se ansatte funksjonalitet kommer snart!');
+                    const departmentUsers = users.filter(u => u.department === department.name);
+                    alert(`${department.name} har ${departmentUsers.length} ansatte:\n${departmentUsers.map(u => `• ${u.firstName} ${u.lastName}`).join('\n')}`);
                   }}
                 >
                   Se ansatte
@@ -433,48 +459,96 @@ export default function DepartmentsPage() {
               />
             </div>
 
-            <div style={{ marginBottom: '20px' }}>
+            <div style={{ marginBottom: '15px' }}>
               <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Manager *</label>
-              <input
-                type="text"
-                value={newDepartment.manager}
-                onChange={(e) => setNewDepartment({ ...newDepartment, manager: e.target.value })}
+              <select
+                value={newDepartment.managerId}
+                onChange={(e) => setNewDepartment({ ...newDepartment, managerId: e.target.value })}
                 style={{
                   width: '100%',
                   padding: '8px',
                   border: '1px solid #ddd',
                   borderRadius: '4px'
                 }}
-                placeholder="Navn på manager"
+              >
+                <option value="">Velg manager</option>
+                {managerOptions.map(user => (
+                  <option key={user.id} value={user.id}>
+                    {user.firstName} {user.lastName} ({user.role})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Farge</label>
+              <input
+                type="color"
+                value={newDepartment.color}
+                onChange={(e) => setNewDepartment({ ...newDepartment, color: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  height: '40px'
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Budsjett (kr)</label>
+              <input
+                type="number"
+                value={newDepartment.budget}
+                onChange={(e) => setNewDepartment({ ...newDepartment, budget: parseInt(e.target.value) || 0 })}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px'
+                }}
+                placeholder="0"
               />
             </div>
 
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
               <button
                 onClick={() => setShowCreate(false)}
+                disabled={creating}
                 style={{
                   padding: '10px 20px',
                   border: '1px solid #ddd',
                   backgroundColor: 'white',
                   borderRadius: '4px',
-                  cursor: 'pointer'
+                  cursor: creating ? 'not-allowed' : 'pointer',
+                  opacity: creating ? 0.6 : 1
                 }}
               >
                 Avbryt
               </button>
               <button
                 onClick={handleCreate}
+                disabled={creating}
                 style={{
                   padding: '10px 20px',
                   backgroundColor: '#3c8dbc',
                   color: 'white',
                   border: 'none',
                   borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontWeight: 'bold'
+                  cursor: creating ? 'not-allowed' : 'pointer',
+                  fontWeight: 'bold',
+                  opacity: creating ? 0.6 : 1
                 }}
               >
-                Opprett
+                {creating ? (
+                  <>
+                    <i className="fas fa-spinner fa-spin" style={{ marginRight: '8px' }}></i>
+                    Oppretter...
+                  </>
+                ) : (
+                  'Opprett'
+                )}
               </button>
             </div>
           </div>
@@ -557,16 +631,39 @@ export default function DepartmentsPage() {
 
             <div style={{ marginBottom: '15px' }}>
               <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Manager</label>
-              <input
-                type="text"
-                value={selected.manager}
+              <select
+                value={selected.managerId}
                 disabled={!editMode}
-                onChange={(e) => setSelected({ ...selected, manager: e.target.value })}
+                onChange={(e) => setSelected({ ...selected, managerId: e.target.value })}
                 style={{
                   width: '100%',
                   padding: '8px',
                   border: '1px solid #ddd',
                   borderRadius: '4px',
+                  backgroundColor: editMode ? 'white' : '#f8f9fa'
+                }}
+              >
+                {managerOptions.map(user => (
+                  <option key={user.id} value={user.id}>
+                    {user.firstName} {user.lastName} ({user.role})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Farge</label>
+              <input
+                type="color"
+                value={selected.color || '#3c8dbc'}
+                disabled={!editMode}
+                onChange={(e) => setSelected({ ...selected, color: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  height: '40px',
                   backgroundColor: editMode ? 'white' : '#f8f9fa'
                 }}
               />
@@ -591,7 +688,7 @@ export default function DepartmentsPage() {
               </select>
             </div>
 
-            <div style={{ marginBottom: '20px' }}>
+            <div style={{ marginBottom: '15px' }}>
               <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Antall ansatte</label>
               <input
                 type="number"
@@ -608,34 +705,62 @@ export default function DepartmentsPage() {
               />
             </div>
 
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Budsjett (kr)</label>
+              <input
+                type="number"
+                value={selected.budget || 0}
+                disabled={!editMode}
+                onChange={(e) => setSelected({ ...selected, budget: parseInt(e.target.value) || 0 })}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  backgroundColor: editMode ? 'white' : '#f8f9fa'
+                }}
+              />
+            </div>
+
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
               {editMode ? (
                 <>
                   <button
                     onClick={() => setEditMode(false)}
+                    disabled={updating}
                     style={{
                       padding: '10px 20px',
                       border: '1px solid #ddd',
                       backgroundColor: 'white',
                       borderRadius: '4px',
-                      cursor: 'pointer'
+                      cursor: updating ? 'not-allowed' : 'pointer',
+                      opacity: updating ? 0.6 : 1
                     }}
                   >
                     Avbryt
                   </button>
                   <button
                     onClick={handleEdit}
+                    disabled={updating}
                     style={{
                       padding: '10px 20px',
                       backgroundColor: '#3c8dbc',
                       color: 'white',
                       border: 'none',
                       borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontWeight: 'bold'
+                      cursor: updating ? 'not-allowed' : 'pointer',
+                      fontWeight: 'bold',
+                      opacity: updating ? 0.6 : 1
                     }}
                   >
-                    Lagre
+                    {updating ? (
+                      <>
+                        <i className="fas fa-spinner fa-spin" style={{ marginRight: '8px' }}></i>
+                        Lagrer...
+                      </>
+                    ) : (
+                      'Lagre'
+                    )}
                   </button>
                 </>
               ) : (
@@ -668,7 +793,14 @@ export default function DepartmentsPage() {
                   opacity: deleting ? 0.6 : 1
                 }}
               >
-                {deleting ? 'Sletter...' : 'Slett'}
+                {deleting ? (
+                  <>
+                    <i className="fas fa-spinner fa-spin" style={{ marginRight: '8px' }}></i>
+                    Sletter...
+                  </>
+                ) : (
+                  'Slett'
+                )}
               </button>
             </div>
           </div>
