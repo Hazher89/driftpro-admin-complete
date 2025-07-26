@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { FirebaseService } from '../../lib/firebase-service';
+// import { FirebaseService } from '../../lib/firebase-service';
 
 interface Absence {
   id: string;
@@ -32,8 +32,8 @@ export default function AbsencePage() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [selected, setSelected] = useState<Absence | null>(null);
-  const [editMode, setEditMode] = useState(false);
+  // const [selected, setSelected] = useState<Absence | null>(null);
+  // const [editMode, setEditMode] = useState(false);
 
   useEffect(() => {
     if (selectedCompany) {
@@ -81,7 +81,7 @@ export default function AbsencePage() {
         }
       ];
       setAbsences(mockAbsences);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error fetching absences:', error);
     }
     setLoading(false);

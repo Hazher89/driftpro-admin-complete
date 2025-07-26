@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { FirebaseService } from '../../lib/firebase-service';
+// import { FirebaseService } from '../../lib/firebase-service';
 
 interface TimeEntry {
   id: string;
@@ -114,7 +114,7 @@ export default function TimeClockPage() {
 
       setEmployees(mockEmployees);
       setTimeEntries(mockTimeEntries);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error fetching data:', error);
     }
     setLoading(false);
