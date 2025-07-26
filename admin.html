@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DriftPro Admin - Avdelinger</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #111827; }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="mb-8">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-4xl font-bold mb-2">🏢 Avdelinger</h1>
+                    <p class="text-gray-400">Administrer avdelinger og brukere</p>
+                </div>
+                <button
+                    onclick="showAddDepartmentModal()"
+                    class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-semibold transition-colors"
+                >
+                    + Legg til avdeling
+                </button>
+            </div>
+        </header>
+
+        <!-- Departments Grid -->
+        <div class="space-y-6" id="departmentsGrid">
+            <!-- Departments will be loaded here -->
+        </div>
+    </div>
+
+    <!-- Add Department Modal -->
+    <div id="addDepartmentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-gray-800 p-6 rounded-lg w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Legg til ny avdeling</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Avdelingsnavn</label>
+                    <input type="text" id="departmentName" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none" placeholder="Skriv avdelingsnavn">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Avdelingsleder (valgfritt)</label>
+                    <select id="departmentLeader" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none">
+                        <option value="">Velg leder</option>
+                    </select>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="addDepartment()" class="flex-1 bg-blue-600 hover:bg-blue-700 py-3 rounded-lg font-semibold transition-colors">
+                        Legg til
+                    </button>
+                    <button onclick="hideAddDepartmentModal()" class="flex-1 bg-gray-600 hover:bg-gray-700 py-3 rounded-lg font-semibold transition-colors">
+                        Avbryt
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Department Modal -->
+    <div id="editDepartmentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-gray-800 p-6 rounded-lg w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Rediger avdeling</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Avdelingsnavn</label>
+                    <input type="text" id="editDepartmentName" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none" placeholder="Skriv avdelingsnavn">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Avdelingsleder</label>
+                    <select id="editDepartmentLeader" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none">
+                        <option value="">Velg leder</option>
+                    </select>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="saveDepartmentEdit()" class="flex-1 bg-yellow-600 hover:bg-yellow-700 py-3 rounded-lg font-semibold transition-colors">
+                        Lagre endringer
+                    </button>
+                    <button onclick="hideEditDepartmentModal()" class="flex-1 bg-gray-600 hover:bg-gray-700 py-3 rounded-lg font-semibold transition-colors">
+                        Avbryt
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manage Users Modal -->
+    <div id="manageUsersModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-gray-800 p-6 rounded-lg w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+            <h2 class="text-2xl font-bold mb-4" id="manageUsersTitle">Administrer brukere</h2>
+            
+            <div class="space-y-6">
+                <div>
+                    <h3 class="text-lg font-semibold mb-3">Brukere i avdelingen</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3" id="currentUsersList">
+                        <!-- Current users will be loaded here -->
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-lg font-semibold mb-3">Legg til brukere</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3" id="availableUsersList">
+                        <!-- Available users will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6">
+                <button onclick="hideManageUsersModal()" class="w-full bg-gray-600 hover:bg-gray-700 py-3 rounded-lg font-semibold transition-colors">
+                    Lukk
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mock data
+        let departments = [
+            {
+                id: '1',
+                name: 'IT-avdelingen',
+                leaderId: '1',
+                users: []
+            },
+            {
+                id: '2',
+                name: 'HR-avdelingen',
+                leaderId: '2',
+                users: []
+            }
+        ];
+
+        let users = [
+            { id: '1', firstName: 'Ola', lastName: 'Nordmann', email: 'ola@driftpro.no', departmentId: null },
+            { id: '2', firstName: 'Kari', lastName: 'Hansen', email: 'kari@driftpro.no', departmentId: null },
+            { id: '3', firstName: 'Per', lastName: 'Olsen', email: 'per@driftpro.no', departmentId: null },
+            { id: '4', firstName: 'Anne', lastName: 'Berg', email: 'anne@driftpro.no', departmentId: null },
+            { id: '5', firstName: 'Erik', lastName: 'Sørensen', email: 'erik@driftpro.no', departmentId: null }
+        ];
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            displayDepartments();
+        });
+
+        // Modal functions
+        function showAddDepartmentModal() {
+            document.getElementById('addDepartmentModal').classList.remove('hidden');
+            populateLeaderSelect();
+        }
+
+        function hideAddDepartmentModal() {
+            document.getElementById('addDepartmentModal').classList.add('hidden');
+            document.getElementById('departmentName').value = '';
+            document.getElementById('departmentLeader').value = '';
+        }
+
+        function showEditDepartmentModal(deptId) {
+            const department = departments.find(d => d.id === deptId);
+            if (department) {
+                document.getElementById('editDepartmentName').value = department.name;
+                document.getElementById('editDepartmentLeader').value = department.leaderId || '';
+                document.getElementById('editDepartmentModal').setAttribute('data-dept-id', deptId);
+                document.getElementById('editDepartmentModal').classList.remove('hidden');
+                populateLeaderSelect('editDepartmentLeader');
+            }
+        }
+
+        function hideEditDepartmentModal() {
+            document.getElementById('editDepartmentModal').classList.add('hidden');
+            document.getElementById('editDepartmentName').value = '';
+            document.getElementById('editDepartmentLeader').value = '';
+        }
+
+        function showManageUsersModal(deptId) {
+            const department = departments.find(d => d.id === deptId);
+            if (department) {
+                document.getElementById('manageUsersTitle').textContent = `Administrer brukere - ${department.name}`;
+                document.getElementById('manageUsersModal').setAttribute('data-dept-id', deptId);
+                document.getElementById('manageUsersModal').classList.remove('hidden');
+                populateUserLists(deptId);
+            }
+        }
+
+        function hideManageUsersModal() {
+            document.getElementById('manageUsersModal').classList.add('hidden');
+        }
+
+        function populateLeaderSelect(selectId = 'departmentLeader') {
+            const select = document.getElementById(selectId);
+            select.innerHTML = '<option value="">Velg leder</option>';
+            users.forEach(user => {
+                select.innerHTML += `<option value="${user.id}">${user.firstName} ${user.lastName}</option>`;
+            });
+        }
+
+        function populateUserLists(deptId) {
+            const department = departments.find(d => d.id === deptId);
+            const currentUsersList = document.getElementById('currentUsersList');
+            const availableUsersList = document.getElementById('availableUsersList');
+
+            // Current users in department
+            currentUsersList.innerHTML = '';
+            if (department.users && department.users.length > 0) {
+                department.users.forEach(user => {
+                    currentUsersList.innerHTML += `
+                        <div class="bg-gray-700 p-3 rounded-lg flex justify-between items-center">
+                            <div>
+                                <p class="font-medium">${user.firstName} ${user.lastName}</p>
+                                <p class="text-sm text-gray-400">${user.email}</p>
+                            </div>
+                            <button onclick="removeUserFromDepartment('${user.id}', '${deptId}')" class="text-red-400 hover:text-red-300 text-sm">
+                                Fjern
+                            </button>
+                        </div>
+                    `;
+                });
+            } else {
+                currentUsersList.innerHTML = '<p class="text-gray-400">Ingen brukere i denne avdelingen</p>';
+            }
+
+            // Available users
+            availableUsersList.innerHTML = '';
+            const availableUsers = users.filter(user => !user.departmentId || user.departmentId !== deptId);
+            availableUsers.forEach(user => {
+                availableUsersList.innerHTML += `
+                    <div class="bg-gray-700 p-3 rounded-lg flex justify-between items-center">
+                        <div>
+                            <p class="font-medium">${user.firstName} ${user.lastName}</p>
+                            <p class="text-sm text-gray-400">${user.email}</p>
+                        </div>
+                        <button onclick="addUserToDepartment('${user.id}', '${deptId}')" class="text-green-400 hover:text-green-300 text-sm">
+                            Legg til
+                        </button>
+                    </div>
+                `;
+            });
+        }
+
+        function addDepartment() {
+            const name = document.getElementById('departmentName').value.trim();
+            const leaderId = document.getElementById('departmentLeader').value;
+
+            if (name) {
+                const newDepartment = {
+                    id: Date.now().toString(),
+                    name: name,
+                    leaderId: leaderId || null,
+                    users: []
+                };
+                departments.push(newDepartment);
+                hideAddDepartmentModal();
+                displayDepartments();
+            }
+        }
+
+        function saveDepartmentEdit() {
+            const deptId = document.getElementById('editDepartmentModal').getAttribute('data-dept-id');
+            const name = document.getElementById('editDepartmentName').value.trim();
+            const leaderId = document.getElementById('editDepartmentLeader').value;
+
+            if (name && deptId) {
+                const department = departments.find(d => d.id === deptId);
+                if (department) {
+                    department.name = name;
+                    department.leaderId = leaderId || null;
+                    hideEditDepartmentModal();
+                    displayDepartments();
+                }
+            }
+        }
+
+        function deleteDepartment(deptId) {
+            if (confirm('Er du sikker på at du vil slette denne avdelingen?')) {
+                departments = departments.filter(dept => dept.id !== deptId);
+                displayDepartments();
+            }
+        }
+
+        function addUserToDepartment(userId, deptId) {
+            const user = users.find(u => u.id === userId);
+            const department = departments.find(d => d.id === deptId);
+            
+            if (user && department) {
+                user.departmentId = deptId;
+                if (!department.users) department.users = [];
+                department.users.push(user);
+                populateUserLists(deptId);
+                displayDepartments();
+            }
+        }
+
+        function removeUserFromDepartment(userId, deptId) {
+            const user = users.find(u => u.id === userId);
+            const department = departments.find(d => d.id === deptId);
+            
+            if (user && department) {
+                user.departmentId = null;
+                department.users = department.users.filter(u => u.id !== userId);
+                populateUserLists(deptId);
+                displayDepartments();
+            }
+        }
+
+        function displayDepartments() {
+            const grid = document.getElementById('departmentsGrid');
+            grid.innerHTML = '';
+            
+            if (departments.length === 0) {
+                grid.innerHTML = `
+                    <div class="text-center py-12">
+                        <p class="text-gray-400 text-lg">Ingen avdelinger funnet</p>
+                        <p class="text-gray-500">Klikk "Legg til avdeling" for å komme i gang</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            departments.forEach(dept => {
+                const leader = users.find(u => u.id === dept.leaderId);
+                const leaderName = leader ? `${leader.firstName} ${leader.lastName}` : 'Ikke satt';
+                
+                const div = document.createElement('div');
+                div.className = 'bg-gray-700 p-6 rounded-lg';
+                div.innerHTML = `
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-2xl font-semibold mb-2">${dept.name}</h3>
+                            <p class="text-gray-400">Leder: ${leaderName}</p>
+                            <p class="text-gray-400">Antall brukere: ${dept.users ? dept.users.length : 0}</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="showManageUsersModal('${dept.id}')" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg transition-colors">
+                                👥 Brukere
+                            </button>
+                            <button onclick="showEditDepartmentModal('${dept.id}')" class="bg-yellow-600 hover:bg-yellow-700 px-4 py-2 rounded-lg transition-colors">
+                                ✏️ Rediger
+                            </button>
+                            <button onclick="deleteDepartment('${dept.id}')" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition-colors">
+                                🗑️ Slett
+                            </button>
+                        </div>
+                    </div>
+                    
+                    ${dept.users && dept.users.length > 0 ? `
+                        <div class="mt-4">
+                            <h4 class="text-lg font-semibold mb-2">Brukere i avdelingen:</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                                ${dept.users.map(user => `
+                                    <div class="bg-gray-600 p-3 rounded-lg flex justify-between items-center">
+                                        <div>
+                                            <p class="font-medium">${user.firstName} ${user.lastName}</p>
+                                            <p class="text-sm text-gray-400">${user.email}</p>
+                                        </div>
+                                        <button onclick="removeUserFromDepartment('${user.id}', '${dept.id}')" class="text-red-400 hover:text-red-300 text-sm">
+                                            Fjern
+                                        </button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                `;
+                grid.appendChild(div);
+            });
+        }
+    </script>
+</body>
+</html> 

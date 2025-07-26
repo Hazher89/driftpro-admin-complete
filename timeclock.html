@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DriftPro - Stempel-system</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .timecard {
+            transition: all 0.3s ease;
+        }
+        .timecard:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+        .status-in { background: linear-gradient(135deg, #10b981, #059669); }
+        .status-out { background: linear-gradient(135deg, #ef4444, #dc2626); }
+        .status-break { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .status-late { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-orange-900 via-red-900 to-pink-900 min-h-screen">
+    <header class="bg-white/10 backdrop-blur-lg border-b border-white/20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center space-x-4">
+                    <button onclick="window.location.href='index.html'" class="text-white hover:text-gray-300 transition-colors">
+                        <i class="fas fa-arrow-left text-xl"></i>
+                    </button>
+                    <div>
+                        <h1 class="text-2xl font-bold text-white">Stempel-system</h1>
+                        <p class="text-gray-300">Administrer ansattes arbeidstid og oppmøte</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span id="userName" class="text-white font-medium"></span>
+                    <button onclick="logout()" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-all duration-200">
+                        <i class="fas fa-sign-out-alt mr-2"></i>Logg ut
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="glass-effect rounded-2xl p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-300 text-sm">Ansatte på Jobb</p>
+                        <p class="text-2xl font-bold text-white" id="employeesWorking">0</p>
+                    </div>
+                    <div class="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user-clock text-green-400 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="glass-effect rounded-2xl p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-300 text-sm">På Pause</p>
+                        <p class="text-2xl font-bold text-white" id="employeesOnBreak">0</p>
+                    </div>
+                    <div class="w-12 h-12 bg-yellow-500/20 rounded-full flex items-center justify-center">
+                        <i class="fas fa-coffee text-yellow-400 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="glass-effect rounded-2xl p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-300 text-sm">Forsinket i Dag</p>
+                        <p class="text-2xl font-bold text-white" id="employeesLate">0</p>
+                    </div>
+                    <div class="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center">
+                        <i class="fas fa-exclamation-triangle text-red-400 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="glass-effect rounded-2xl p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-300 text-sm">Totalt Timer i Dag</p>
+                        <p class="text-2xl font-bold text-white" id="totalHoursToday">0h</p>
+                    </div>
+                    <div class="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center">
+                        <i class="fas fa-clock text-blue-400 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap gap-4 mb-8">
+            <button onclick="showManualTimeEntryModal()" class="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-3 rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all duration-200 shadow-lg">
+                <i class="fas fa-plus mr-2"></i>Manuell Tidsregistrering
+            </button>
+            <button onclick="showTimeReportModal()" class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg">
+                <i class="fas fa-chart-bar mr-2"></i>Tidsrapport
+            </button>
+            <button onclick="exportTimeData()" class="bg-gradient-to-r from-purple-500 to-purple-600 text-white px-6 py-3 rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all duration-200 shadow-lg">
+                <i class="fas fa-download mr-2"></i>Eksporter Data
+            </button>
+        </div>
+
+        <div class="glass-effect rounded-2xl p-6 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Status</label>
+                    <select id="statusFilter" class="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:ring-2 focus:ring-blue-500">
+                        <option value="">Alle statuser</option>
+                        <option value="in">På jobb</option>
+                        <option value="out">Ikke på jobb</option>
+                        <option value="break">Pause</option>
+                        <option value="late">Forsinket</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Ansatt</label>
+                    <select id="employeeFilter" class="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:ring-2 focus:ring-blue-500">
+                        <option value="">Alle ansatte</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Fra Dato</label>
+                    <input type="date" id="startDateFilter" class="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Til Dato</label>
+                    <input type="date" id="endDateFilter" class="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+        </div>
+
+        <div class="glass-effect rounded-2xl shadow-xl">
+            <div class="px-6 py-4 border-b border-white/20">
+                <h3 class="text-xl font-bold text-white">Tidsregistrering Oversikt</h3>
+            </div>
+            <div class="p-6">
+                <div id="timeclockList" class="space-y-4">
+                    <div class="text-center py-8">
+                        <i class="fas fa-clock text-gray-400 text-4xl mb-4"></i>
+                        <p class="text-gray-400">Ingen tidsregistrering funnet</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
+            authDomain: "driftpro-40ccd.firebaseapp.com",
+            projectId: "driftpro-40ccd",
+            storageBucket: "driftpro-40ccd.appspot.com",
+            messagingSenderId: "123456789012",
+            appId: "1:123456789012:web:abcdef1234567890"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        let currentUser = null;
+        let currentCompanyId = null;
+        let employees = [];
+        let timeEntries = [];
+
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                currentUser = user;
+                showDashboard(user);
+            } else {
+                window.location.href = '/';
+            }
+        });
+
+        async function showDashboard(user) {
+            document.getElementById('userName').textContent = user.email;
+            
+            try {
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                const userData = userDoc.data();
+                currentCompanyId = userData?.companyId;
+                
+                if (!currentCompanyId) {
+                    console.error('No company ID found for user');
+                    return;
+                }
+                
+                await loadEmployees();
+                await loadTimeEntries();
+                updateStats();
+            } catch (error) {
+                console.error('Error loading user data:', error);
+            }
+        }
+
+        async function loadEmployees() {
+            try {
+                const employeesSnapshot = await db.collection('users')
+                    .where('companyId', '==', currentCompanyId)
+                    .get();
+                
+                employees = [];
+                employeesSnapshot.forEach(doc => {
+                    employees.push({ id: doc.id, ...doc.data() });
+                });
+                
+                const employeeFilter = document.getElementById('employeeFilter');
+                employeeFilter.innerHTML = '<option value="">Alle ansatte</option>';
+                employees.forEach(employee => {
+                    const option = document.createElement('option');
+                    option.value = employee.id;
+                    option.textContent = employee.name || employee.email;
+                    employeeFilter.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading employees:', error);
+            }
+        }
+
+        async function loadTimeEntries() {
+            try {
+                const timeEntriesSnapshot = await db.collection('timeEntries')
+                    .where('companyId', '==', currentCompanyId)
+                    .orderBy('timestamp', 'desc')
+                    .get();
+                
+                timeEntries = [];
+                timeEntriesSnapshot.forEach(doc => {
+                    timeEntries.push({ id: doc.id, ...doc.data() });
+                });
+                
+                renderTimeEntries();
+            } catch (error) {
+                console.error('Error loading time entries:', error);
+            }
+        }
+
+        function renderTimeEntries() {
+            const timeclockList = document.getElementById('timeclockList');
+            
+            if (timeEntries.length === 0) {
+                timeclockList.innerHTML = `
+                    <div class="text-center py-8">
+                        <i class="fas fa-clock text-gray-400 text-4xl mb-4"></i>
+                        <p class="text-gray-400">Ingen tidsregistrering funnet</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            timeclockList.innerHTML = timeEntries.map(entry => {
+                const employee = employees.find(emp => emp.id === entry.employeeId);
+                const timestamp = new Date(entry.timestamp.toDate ? entry.timestamp.toDate() : entry.timestamp).toLocaleString('no-NO');
+                
+                let statusClass = '';
+                let statusText = '';
+                let statusIcon = '';
+                
+                switch(entry.type) {
+                    case 'in':
+                        statusClass = 'status-in';
+                        statusText = 'Innstempling';
+                        statusIcon = 'fas fa-sign-in-alt';
+                        break;
+                    case 'out':
+                        statusClass = 'status-out';
+                        statusText = 'Utstempling';
+                        statusIcon = 'fas fa-sign-out-alt';
+                        break;
+                    case 'break':
+                        statusClass = 'status-break';
+                        statusText = 'Pause';
+                        statusIcon = 'fas fa-coffee';
+                        break;
+                    case 'late':
+                        statusClass = 'status-late';
+                        statusText = 'Forsinket';
+                        statusIcon = 'fas fa-exclamation-triangle';
+                        break;
+                }
+                
+                return `
+                    <div class="timecard glass-effect rounded-xl p-6">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-4">
+                                <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center text-white font-bold">
+                                    ${employee?.name?.charAt(0)?.toUpperCase() || 'A'}
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-white">${employee?.name || 'Ukjent ansatt'}</h4>
+                                    <p class="text-gray-300 text-sm">${timestamp}</p>
+                                    ${entry.note ? `<p class="text-gray-400 text-sm mt-1">${entry.note}</p>` : ''}
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <span class="px-3 py-1 rounded-full text-white text-sm font-medium ${statusClass}">
+                                    <i class="${statusIcon} mr-1"></i>${statusText}
+                                </span>
+                                <div class="flex space-x-2">
+                                    <button onclick="editTimeEntry('${entry.id}')" class="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button onclick="deleteTimeEntry('${entry.id}')" class="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateStats() {
+            const working = timeEntries.filter(entry => entry.type === 'in').length;
+            const onBreak = timeEntries.filter(entry => entry.type === 'break').length;
+            const late = timeEntries.filter(entry => entry.type === 'late').length;
+            
+            // Calculate total hours for today
+            const today = new Date().toISOString().split('T')[0];
+            const todayEntries = timeEntries.filter(entry => {
+                const entryDate = new Date(entry.timestamp.toDate ? entry.timestamp.toDate() : entry.timestamp).toISOString().split('T')[0];
+                return entryDate === today;
+            });
+            
+            let totalHours = 0;
+            for (let i = 0; i < todayEntries.length; i += 2) {
+                if (i + 1 < todayEntries.length) {
+                    const start = new Date(todayEntries[i].timestamp.toDate ? todayEntries[i].timestamp.toDate() : todayEntries[i].timestamp);
+                    const end = new Date(todayEntries[i + 1].timestamp.toDate ? todayEntries[i + 1].timestamp.toDate() : todayEntries[i + 1].timestamp);
+                    totalHours += (end - start) / (1000 * 60 * 60);
+                }
+            }
+            
+            document.getElementById('employeesWorking').textContent = working;
+            document.getElementById('employeesOnBreak').textContent = onBreak;
+            document.getElementById('employeesLate').textContent = late;
+            document.getElementById('totalHoursToday').textContent = Math.round(totalHours * 10) / 10 + 'h';
+        }
+
+        function showManualTimeEntryModal() {
+            alert('Manuell tidsregistrering kommer snart!');
+        }
+
+        function showTimeReportModal() {
+            alert('Tidsrapport kommer snart!');
+        }
+
+        function exportTimeData() {
+            alert('Eksport kommer snart!');
+        }
+
+        function editTimeEntry(entryId) {
+            alert('Redigering kommer snart!');
+        }
+
+        async function deleteTimeEntry(entryId) {
+            if (!confirm('Er du sikker på at du vil slette denne tidsregistreringen?')) return;
+            
+            try {
+                await db.collection('timeEntries').doc(entryId).delete();
+                await loadTimeEntries();
+                updateStats();
+                alert('Tidsregistrering slettet!');
+            } catch (error) {
+                console.error('Error deleting time entry:', error);
+                alert('Feil ved sletting');
+            }
+        }
+
+        function logout() {
+            auth.signOut().then(() => {
+                window.location.href = '/';
+            }).catch(error => {
+                console.error('Error logging out:', error);
+            });
+        }
+    </script>
+</body>
+</html>
